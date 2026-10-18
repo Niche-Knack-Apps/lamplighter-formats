@@ -1,0 +1,10 @@
+lamplighter-formats
+Copyright 2026 Niche-Knack Apps LLC
+
+Licensed under the Apache License, Version 2.0.
+
+vendor/bible-model.js is the reader model from Lamplighter (Apache-2.0, Niche-Knack Apps LLC),
+copied here so a file can be proven to load exactly as the app loads it.
+templates/edition.sample.json quotes the King James Version (public domain).
+lib/canon.json records the King James versification (book, chapter and verse counts), which is
+a fact about the text, not a copyrightable work.

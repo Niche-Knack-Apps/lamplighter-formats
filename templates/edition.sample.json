@@ -1,0 +1,91 @@
+{
+  "name": "Sample Edition (KJV excerpts)",
+  "abbreviation": "SMPL",
+  "language": "eng",
+  "languageEnglishName": "English",
+  "license": "Public Domain",
+  "license_url": "https://en.wikipedia.org/wiki/King_James_Version",
+  "attribution": "",
+  "textDirection": "ltr",
+  "books": [
+    {
+      "name": "Genesis",
+      "abbrev": "GEN",
+      "chapters": [
+        {
+          "chapter": 1,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "In the beginning God created the heaven and the earth."
+            },
+            {
+              "verse": 2,
+              "text": "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters."
+            },
+            {
+              "verse": 3,
+              "text": "And God said, Let there be light: and there was light."
+            },
+            {
+              "verse": 4,
+              "text": "And God saw the light, that it was good: and God divided the light from the darkness."
+            },
+            {
+              "verse": 5,
+              "text": "And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day."
+            }
+          ]
+        },
+        {
+          "chapter": 2,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "Thus the heavens and the earth were finished, and all the host of them."
+            },
+            {
+              "verse": 2,
+              "text": "And on the seventh day God ended his work which he had made; and he rested on the seventh day from all his work which he had made."
+            },
+            {
+              "verse": 3,
+              "text": "And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "John",
+      "abbrev": "JHN",
+      "chapters": [
+        {
+          "chapter": 1,
+          "verses": [
+            {
+              "verse": 1,
+              "text": "In the beginning was the Word, and the Word was with God, and the Word was God."
+            },
+            {
+              "verse": 2,
+              "text": "The same was in the beginning with God."
+            },
+            {
+              "verse": 3,
+              "text": "All things were made by him; and without him was not any thing made that was made."
+            },
+            {
+              "verse": 4,
+              "text": "In him was life; and the life was the light of men."
+            },
+            {
+              "verse": 5,
+              "text": "And the light shineth in darkness; and the darkness comprehended it not."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

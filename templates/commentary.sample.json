@@ -1,0 +1,51 @@
+{
+  "name": "Sample Commentary",
+  "type": "commentary",
+  "entries": [
+    {
+      "range": {
+        "start": {
+          "book": "Genesis",
+          "book_index": 0
+        },
+        "end": {
+          "book": "Genesis",
+          "book_index": 0
+        }
+      },
+      "content": "A note on the whole book of Genesis."
+    },
+    {
+      "range": {
+        "start": {
+          "book": "Genesis",
+          "book_index": 0,
+          "chapter": 1,
+          "verse": 1
+        },
+        "end": {
+          "book": "Genesis",
+          "book_index": 0,
+          "chapter": 1,
+          "verse": 2
+        }
+      },
+      "content": "A note on Genesis 1:1-2."
+    },
+    {
+      "range": {
+        "start": {
+          "book": "John",
+          "book_index": 42,
+          "chapter": 1
+        },
+        "end": {
+          "book": "John",
+          "book_index": 42,
+          "chapter": 1
+        }
+      },
+      "content": "A note on the whole of John 1."
+    }
+  ]
+}

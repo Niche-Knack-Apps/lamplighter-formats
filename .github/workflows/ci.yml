@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: npm run lint:templates
+      - run: python3 -m py_compile scripts/oci-editions.py
+
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: VERSION matches package.json
+        run: |
+          v=$(tr -d '[:space:]' < VERSION)
+          p=$(node -p "require('./package.json').version")
+          [ "$v" = "$p" ] || { echo "VERSION $v != package.json $p"; exit 1; }
+      - name: pull request bumps VERSION
+        if: github.event_name == 'pull_request'
+        run: |
+          v=$(tr -d '[:space:]' < VERSION)
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then echo "VERSION $v is already released; bump it"; exit 1; fi

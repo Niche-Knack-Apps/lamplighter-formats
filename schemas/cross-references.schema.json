@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/cross-references.schema.json",
+  "title": "Lamplighter cross-references",
+  "type": "object",
+  "required": [
+    "meta",
+    "refs"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "type": {
+          "const": "cross_reference"
+        }
+      }
+    },
+    "refs": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "ref"
+          ],
+          "properties": {
+            "ref": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$"
+            },
+            "endRef": {
+              "type": "string",
+              "pattern": "^\\d+\\.\\d+\\.\\d+$"
+            },
+            "weight": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
+  }
+}
