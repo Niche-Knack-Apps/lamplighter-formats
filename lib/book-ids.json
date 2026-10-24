@@ -1,0 +1,512 @@
+[
+  {
+    "name": "Genesis",
+    "abbrev": "GEN",
+    "osis": "Gen",
+    "usfm": "GEN"
+  },
+  {
+    "name": "Exodus",
+    "abbrev": "EXO",
+    "osis": "Exod",
+    "usfm": "EXO"
+  },
+  {
+    "name": "Leviticus",
+    "abbrev": "LEV",
+    "osis": "Lev",
+    "usfm": "LEV"
+  },
+  {
+    "name": "Numbers",
+    "abbrev": "NUM",
+    "osis": "Num",
+    "usfm": "NUM"
+  },
+  {
+    "name": "Deuteronomy",
+    "abbrev": "DEU",
+    "osis": "Deut",
+    "usfm": "DEU"
+  },
+  {
+    "name": "Joshua",
+    "abbrev": "JOS",
+    "osis": "Josh",
+    "usfm": "JOS"
+  },
+  {
+    "name": "Judges",
+    "abbrev": "JDG",
+    "osis": "Judg",
+    "usfm": "JDG"
+  },
+  {
+    "name": "Ruth",
+    "abbrev": "RUT",
+    "osis": "Ruth",
+    "usfm": "RUT"
+  },
+  {
+    "name": "1 Samuel",
+    "abbrev": "1SA",
+    "osis": "1Sam",
+    "usfm": "1SA"
+  },
+  {
+    "name": "2 Samuel",
+    "abbrev": "2SA",
+    "osis": "2Sam",
+    "usfm": "2SA"
+  },
+  {
+    "name": "1 Kings",
+    "abbrev": "1KI",
+    "osis": "1Kgs",
+    "usfm": "1KI"
+  },
+  {
+    "name": "2 Kings",
+    "abbrev": "2KI",
+    "osis": "2Kgs",
+    "usfm": "2KI"
+  },
+  {
+    "name": "1 Chronicles",
+    "abbrev": "1CH",
+    "osis": "1Chr",
+    "usfm": "1CH"
+  },
+  {
+    "name": "2 Chronicles",
+    "abbrev": "2CH",
+    "osis": "2Chr",
+    "usfm": "2CH"
+  },
+  {
+    "name": "Ezra",
+    "abbrev": "EZR",
+    "osis": "Ezra",
+    "usfm": "EZR"
+  },
+  {
+    "name": "Nehemiah",
+    "abbrev": "NEH",
+    "osis": "Neh",
+    "usfm": "NEH"
+  },
+  {
+    "name": "Esther",
+    "abbrev": "EST",
+    "osis": "Esth",
+    "usfm": "EST"
+  },
+  {
+    "name": "Job",
+    "abbrev": "JOB",
+    "osis": "Job",
+    "usfm": "JOB"
+  },
+  {
+    "name": "Psalms",
+    "abbrev": "PSA",
+    "osis": "Ps",
+    "usfm": "PSA"
+  },
+  {
+    "name": "Proverbs",
+    "abbrev": "PRO",
+    "osis": "Prov",
+    "usfm": "PRO"
+  },
+  {
+    "name": "Ecclesiastes",
+    "abbrev": "ECC",
+    "osis": "Eccl",
+    "usfm": "ECC"
+  },
+  {
+    "name": "Song of Solomon",
+    "abbrev": "SNG",
+    "osis": "Song",
+    "usfm": "SNG"
+  },
+  {
+    "name": "Isaiah",
+    "abbrev": "ISA",
+    "osis": "Isa",
+    "usfm": "ISA"
+  },
+  {
+    "name": "Jeremiah",
+    "abbrev": "JER",
+    "osis": "Jer",
+    "usfm": "JER"
+  },
+  {
+    "name": "Lamentations",
+    "abbrev": "LAM",
+    "osis": "Lam",
+    "usfm": "LAM"
+  },
+  {
+    "name": "Ezekiel",
+    "abbrev": "EZK",
+    "osis": "Ezek",
+    "usfm": "EZK"
+  },
+  {
+    "name": "Daniel",
+    "abbrev": "DAN",
+    "osis": "Dan",
+    "usfm": "DAN"
+  },
+  {
+    "name": "Hosea",
+    "abbrev": "HOS",
+    "osis": "Hos",
+    "usfm": "HOS"
+  },
+  {
+    "name": "Joel",
+    "abbrev": "JOL",
+    "osis": "Joel",
+    "usfm": "JOL"
+  },
+  {
+    "name": "Amos",
+    "abbrev": "AMO",
+    "osis": "Amos",
+    "usfm": "AMO"
+  },
+  {
+    "name": "Obadiah",
+    "abbrev": "OBA",
+    "osis": "Obad",
+    "usfm": "OBA"
+  },
+  {
+    "name": "Jonah",
+    "abbrev": "JON",
+    "osis": "Jonah",
+    "usfm": "JON"
+  },
+  {
+    "name": "Micah",
+    "abbrev": "MIC",
+    "osis": "Mic",
+    "usfm": "MIC"
+  },
+  {
+    "name": "Nahum",
+    "abbrev": "NAH",
+    "osis": "Nah",
+    "usfm": "NAM"
+  },
+  {
+    "name": "Habakkuk",
+    "abbrev": "HAB",
+    "osis": "Hab",
+    "usfm": "HAB"
+  },
+  {
+    "name": "Zephaniah",
+    "abbrev": "ZEP",
+    "osis": "Zeph",
+    "usfm": "ZEP"
+  },
+  {
+    "name": "Haggai",
+    "abbrev": "HAG",
+    "osis": "Hag",
+    "usfm": "HAG"
+  },
+  {
+    "name": "Zechariah",
+    "abbrev": "ZEC",
+    "osis": "Zech",
+    "usfm": "ZEC"
+  },
+  {
+    "name": "Malachi",
+    "abbrev": "MAL",
+    "osis": "Mal",
+    "usfm": "MAL"
+  },
+  {
+    "name": "Matthew",
+    "abbrev": "MAT",
+    "osis": "Matt",
+    "usfm": "MAT"
+  },
+  {
+    "name": "Mark",
+    "abbrev": "MRK",
+    "osis": "Mark",
+    "usfm": "MRK"
+  },
+  {
+    "name": "Luke",
+    "abbrev": "LUK",
+    "osis": "Luke",
+    "usfm": "LUK"
+  },
+  {
+    "name": "John",
+    "abbrev": "JHN",
+    "osis": "John",
+    "usfm": "JHN"
+  },
+  {
+    "name": "Acts",
+    "abbrev": "ACT",
+    "osis": "Acts",
+    "usfm": "ACT"
+  },
+  {
+    "name": "Romans",
+    "abbrev": "ROM",
+    "osis": "Rom",
+    "usfm": "ROM"
+  },
+  {
+    "name": "1 Corinthians",
+    "abbrev": "1CO",
+    "osis": "1Cor",
+    "usfm": "1CO"
+  },
+  {
+    "name": "2 Corinthians",
+    "abbrev": "2CO",
+    "osis": "2Cor",
+    "usfm": "2CO"
+  },
+  {
+    "name": "Galatians",
+    "abbrev": "GAL",
+    "osis": "Gal",
+    "usfm": "GAL"
+  },
+  {
+    "name": "Ephesians",
+    "abbrev": "EPH",
+    "osis": "Eph",
+    "usfm": "EPH"
+  },
+  {
+    "name": "Philippians",
+    "abbrev": "PHP",
+    "osis": "Phil",
+    "usfm": "PHP"
+  },
+  {
+    "name": "Colossians",
+    "abbrev": "COL",
+    "osis": "Col",
+    "usfm": "COL"
+  },
+  {
+    "name": "1 Thessalonians",
+    "abbrev": "1TH",
+    "osis": "1Thess",
+    "usfm": "1TH"
+  },
+  {
+    "name": "2 Thessalonians",
+    "abbrev": "2TH",
+    "osis": "2Thess",
+    "usfm": "2TH"
+  },
+  {
+    "name": "1 Timothy",
+    "abbrev": "1TI",
+    "osis": "1Tim",
+    "usfm": "1TI"
+  },
+  {
+    "name": "2 Timothy",
+    "abbrev": "2TI",
+    "osis": "2Tim",
+    "usfm": "2TI"
+  },
+  {
+    "name": "Titus",
+    "abbrev": "TIT",
+    "osis": "Titus",
+    "usfm": "TIT"
+  },
+  {
+    "name": "Philemon",
+    "abbrev": "PHM",
+    "osis": "Phlm",
+    "usfm": "PHM"
+  },
+  {
+    "name": "Hebrews",
+    "abbrev": "HEB",
+    "osis": "Heb",
+    "usfm": "HEB"
+  },
+  {
+    "name": "James",
+    "abbrev": "JAS",
+    "osis": "Jas",
+    "usfm": "JAS"
+  },
+  {
+    "name": "1 Peter",
+    "abbrev": "1PE",
+    "osis": "1Pet",
+    "usfm": "1PE"
+  },
+  {
+    "name": "2 Peter",
+    "abbrev": "2PE",
+    "osis": "2Pet",
+    "usfm": "2PE"
+  },
+  {
+    "name": "1 John",
+    "abbrev": "1JN",
+    "osis": "1John",
+    "usfm": "1JN"
+  },
+  {
+    "name": "2 John",
+    "abbrev": "2JN",
+    "osis": "2John",
+    "usfm": "2JN"
+  },
+  {
+    "name": "3 John",
+    "abbrev": "3JN",
+    "osis": "3John",
+    "usfm": "3JN"
+  },
+  {
+    "name": "Jude",
+    "abbrev": "JUD",
+    "osis": "Jude",
+    "usfm": "JUD"
+  },
+  {
+    "name": "Revelation",
+    "abbrev": "REV",
+    "osis": "Rev",
+    "usfm": "REV"
+  },
+  {
+    "name": "Tobit",
+    "abbrev": "Tob",
+    "osis": "Tob",
+    "usfm": "TOB"
+  },
+  {
+    "name": "Judith",
+    "abbrev": "Jdt",
+    "osis": "Jdt",
+    "usfm": "JDT"
+  },
+  {
+    "name": "Wisdom of Solomon",
+    "abbrev": "Wis",
+    "osis": "Wis",
+    "usfm": "WIS"
+  },
+  {
+    "name": "Sirach",
+    "abbrev": "Sir",
+    "osis": "Sir",
+    "usfm": "SIR"
+  },
+  {
+    "name": "Baruch",
+    "abbrev": "Bar",
+    "osis": "Bar",
+    "usfm": "BAR"
+  },
+  {
+    "name": "Letter of Jeremiah",
+    "abbrev": "EpJer",
+    "osis": "EpJer",
+    "usfm": "LJE"
+  },
+  {
+    "name": "Prayer of Azariah",
+    "abbrev": "PrAzar",
+    "osis": "PrAzar",
+    "usfm": "S3Y"
+  },
+  {
+    "name": "Susanna",
+    "abbrev": "Sus",
+    "osis": "Sus",
+    "usfm": "SUS"
+  },
+  {
+    "name": "Bel and the Dragon",
+    "abbrev": "Bel",
+    "osis": "Bel",
+    "usfm": "BEL"
+  },
+  {
+    "name": "1 Maccabees",
+    "abbrev": "1Macc",
+    "osis": "1Macc",
+    "usfm": "1MA"
+  },
+  {
+    "name": "2 Maccabees",
+    "abbrev": "2Macc",
+    "osis": "2Macc",
+    "usfm": "2MA"
+  },
+  {
+    "name": "1 Esdras",
+    "abbrev": "1Esd",
+    "osis": "1Esd",
+    "usfm": "1ES"
+  },
+  {
+    "name": "2 Esdras",
+    "abbrev": "2Esd",
+    "osis": "2Esd",
+    "usfm": "2ES"
+  },
+  {
+    "name": "Prayer of Manasseh",
+    "abbrev": "PrMan",
+    "osis": "PrMan",
+    "usfm": "MAN"
+  },
+  {
+    "name": "Greek Esther",
+    "abbrev": "EsthGr",
+    "osis": "EsthGr",
+    "usfm": "ESG"
+  },
+  {
+    "name": "Greek Daniel",
+    "abbrev": "DanGr",
+    "osis": "DanGr",
+    "usfm": "DAG"
+  },
+  {
+    "name": "3 Maccabees",
+    "abbrev": "3Macc",
+    "osis": "3Macc",
+    "usfm": "3MA"
+  },
+  {
+    "name": "4 Maccabees",
+    "abbrev": "4Macc",
+    "osis": "4Macc",
+    "usfm": "4MA"
+  },
+  {
+    "name": "Psalm 151",
+    "abbrev": "Ps151",
+    "osis": "AddPs",
+    "usfm": "PS2"
+  }
+]

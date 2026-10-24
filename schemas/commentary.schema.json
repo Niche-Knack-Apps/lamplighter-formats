@@ -13,6 +13,63 @@
       "type": "string",
       "minLength": 1
     },
+    "abbreviation": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "languageEnglishName": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "versification": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "textDirection": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "referenceBooks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "type": {
       "const": "commentary"
     },
@@ -53,6 +110,11 @@
                     "type": "integer",
                     "minimum": 1
                   }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
                 }
               },
               "end": {
@@ -76,9 +138,17 @@
                     "type": "integer",
                     "minimum": 1
                   }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
                 }
               }
             }
+          },
+          "title": {
+            "type": "string"
           },
           "content": {
             "type": "string",

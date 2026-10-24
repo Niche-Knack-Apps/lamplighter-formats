@@ -3,12 +3,36 @@
 Everything Lamplighter reads is plain JSON, UTF-8, no byte-order mark. Five kinds of file:
 an **edition** (a Bible translation), a **commentary**, **cross-references**, **original-language
 words**, and a **lexicon**. The first is what most people make; the others are for study
-resources. `lamplighter-formats lint` tells the kinds apart by their shape.
+resources. `lamplighter-formats lint` tells the kinds apart by their shape. All five kinds
+have Draft-07 schemas in `schemas/`. Use both the schema and the linter: JSON Schema cannot
+express array-position numbering, duplicate book names, or the ordering of range endpoints.
 
 Book, chapter and verse numbering: `book_index` counts from 0 in the order the edition lists
 its books (Genesis is 0 in the usual canon, Matthew 39, John 42). Chapters and verses count
 from 1. Keys of the form `"<book_index>.<chapter>.<verse>"` appear in the study resources:
 `"0.1.1"` is Genesis 1:1.
+
+## Version and provenance
+
+Unversioned files remain supported. New tools can add `"formatVersion": 1`; unknown
+versions fail validation rather than being interpreted as an older format. The package
+version (currently 0.2.x) is separate from the data format version.
+
+The following optional top-level fields do not change the existing reader shape:
+
+| Field | Meaning |
+| --- | --- |
+| `formatVersion` | Integer `1`; may be omitted for legacy resources. |
+| `language`, `languageEnglishName`, `textDirection` | Language identity and `ltr`/`rtl` presentation. ISO 639 codes and BCP 47 language tags can be retained. |
+| `license`, `license_url`, `attribution` | Source rights and required credit; conversion does not grant permission to redistribute. |
+| `versification` | The source's declared numbering system, such as `KJV` or `NRSVA`. Metadata does not renumber a resource. |
+| `source` | Provenance object with optional `name`, `url`, `format`, and lowercase `sha256`. |
+| `referenceBooks` | Unique book names in the matching edition's exact order for indexed study references. This declares the mapping; current readers do not automatically remap it. |
+
+Book objects may include `osis` as a stable book identifier. Legacy `book` and `abbr`
+aliases remain accepted alongside `name` and `abbrev`. Unknown extension fields remain
+allowed so existing metadata is not discarded. Interchange JSON is plain text; application
+vault encryption is a separate storage concern.
 
 ## Edition
 
@@ -58,12 +82,18 @@ from 1. Keys of the form `"<book_index>.<chapter>.<verse>"` appear in the study 
 
 Rules the linter enforces:
 
-- Chapters and verses are read **by position**: the first verse object is verse 1, the second
-  verse 2. If the edition leaves a verse out, keep its place with `{ "verse": 7, "text": "" }`.
+- For compatibility with released readers, chapters and verses use **dense positions**:
+  the first verse object is verse 1, the second verse 2. If the edition leaves a verse out,
+  keep its place with `{ "verse": 7, "text": "" }`.
   A `verse` or `chapter` number that disagrees with its position is an error.
 - `text` is a string. Footnote markers, headings and formatting are not part of the text;
   keep the words only.
 - A book name appears once.
+
+`convert --from json` creates a normalized copy of a sparse edition, preserving supplied
+verse objects/text exactly and inserting empty positions for absent numbers. It rejects
+duplicate, invalid, or unreasonably large numbers. This does not reconstruct missing
+wording or harmonize one versification with another. See [CONVERTING.md](CONVERTING.md).
 
 Notes the linter offers (warnings, not faults): a chapter or verse count that differs from the
 King James versification, right-to-left text without `"textDirection": "rtl"`, missing
@@ -95,6 +125,11 @@ Each entry covers a range: a whole book (`book_index` only), a chapter (`chapter
 verses (`chapter` and `verse`). `end` may be left out for a single point. `content` is plain
 text; paragraphs are separated by blank lines. The app shows the entries whose range covers
 the verses the reader selected, the most specific first.
+
+An optional `title` string labels an entry. Each supplied range endpoint needs a nonnegative
+`book_index`; a verse also needs its chapter. The end cannot precede the start. Converters
+require a reference edition for commentary so an NT-only or differently ordered Bible does
+not accidentally receive indices from a 66-book Bible.
 
 ## Cross-references
 

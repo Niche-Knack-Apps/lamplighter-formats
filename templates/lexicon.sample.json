@@ -1,0 +1,14 @@
+{
+  "formatVersion": 1,
+  "meta": {
+    "source": "Synthetic example",
+    "entries": 1
+  },
+  "entries": {
+    "H1697": {
+      "strongs": "H1697",
+      "word": "דָּבָר",
+      "def": "A sample word."
+    }
+  }
+}

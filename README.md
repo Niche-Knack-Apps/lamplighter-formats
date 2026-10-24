@@ -3,8 +3,8 @@
 [![ci](https://github.com/Niche-Knack-Apps/lamplighter-formats/actions/workflows/ci.yml/badge.svg)](https://github.com/Niche-Knack-Apps/lamplighter-formats/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-> The JSON that Lamplighter reads: the formats, a linter, templates, a skeleton for a new
-> language, a way to prove a file loads, and a publisher for any OCI registry.
+> The JSON that Lamplighter reads: schemas, validation, conversion tools, templates,
+> new-language skeletons, and a publisher for any OCI registry.
 
 Made by [Niche-Knack](https://nk.tools) — Smart Tools. Sharp Solutions.
 
@@ -18,13 +18,14 @@ Made by [Niche-Knack](https://nk.tools) — Smart Tools. Sharp Solutions.
 | Path | What it is |
 | --- | --- |
 | [`FORMATS.md`](FORMATS.md) | The formats, each with a complete minimal example: editions, commentaries, cross-references, original-language words, lexicons. |
-| `schemas/` | JSON Schema (draft-07) for editions, commentaries and cross-references, for editors and validators that speak it. |
-| `bin/lamplighter-formats.js` | The command line: `lint`, `new`, `info`. Node 18 or newer, no dependencies. |
+| `schemas/` | JSON Schema (draft-07) for editions, commentaries, cross-references, original-language words, and lexicons. |
+| `bin/lamplighter-formats.js` | The command line: `lint`, `new`, `info`, and `convert`. Node 18 or newer; conversion also needs Python 3.10 or newer. |
+| [`CONVERTING.md`](CONVERTING.md) | Import Word documents, referenced or unnumbered verse lines, USFM, USX, OSIS, and installed SWORD Bible modules. |
 | `lib/` | The same checks as a library (`validate.js`), the skeleton builder (`skeleton.js`) and the King James versification (`canon.json`). |
 | `templates/` | A small sample of each kind, lint-clean, to copy from. |
 | `vendor/bible-model.js` | Lamplighter's own reader model, so a test can prove a file loads exactly as the app loads it. |
 | `scripts/oci-editions.py` | Publish editions to any OCI registry (a zot server, for instance) and read them back. Python 3, standard library only. |
-| `tests/` | What keeps all of the above honest. |
+| `tests/` | Parser, validation, safety, numbering, and reader-compatibility checks using synthetic text. |
 
 ## Quick start
 
@@ -42,9 +43,23 @@ node bin/lamplighter-formats.js new "Nuevo Testamento Sencillo" --out nts.json \
 
 # Counts and facts
 node bin/lamplighter-formats.js info nts.json
+
+# Convert referenced verse lines, preserving Unicode and numbered gaps
+node bin/lamplighter-formats.js convert translation.txt --from vpl \
+  --name "My Translation" --language eng --license "CC BY 4.0" \
+  --out translation.json --report conversion.json
+
+# Word paragraphs use the same explicit references
+node bin/lamplighter-formats.js convert translation.docx --from docx \
+  --name "My Translation" --out translation.json
 ```
 
 `npm link` puts `lamplighter-formats` on your PATH if you prefer.
+
+The converter uses Python's standard library. Legacy `.doc` extraction additionally
+requires `antiword`; installed SWORD modules require CrossWire's `mod2osis` utility.
+These dependencies are optional and are never downloaded automatically. See
+[conversion examples and supported subsets](CONVERTING.md) before converting rich markup.
 
 ## Adding a translation to Lamplighter
 
@@ -86,12 +101,17 @@ same artifacts.
 ## Contributing
 
 Pull requests are welcome: a new language, a fix to the checks, a clearer sentence. Run
-`npm test` and `npm run lint:templates` before sending one, and bump `VERSION` so the release
-check passes.
-
-Really believe in this product's potential and want to contribute to its development?
-[Buy Me a Coffee](https://buymeacoffee.com/nicheknack).
+`npm test` and `npm run lint:templates` before sending one. For the JSON Schema checks,
+install `requirements-dev.txt` into a Python virtual environment, then run
+`npm run test:schemas`. Keep `VERSION` and `package.json` in sync and bump the version
+so the release check passes. The converter fixtures contain synthetic text; do not add
+copyrighted translations to this repository as test data.
 
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Bible texts keep their own licenses.
+
+## Support
+
+Really believe in this project's potential and want to contribute to its development?
+[Buy Me a Coffee](https://buymeacoffee.com/nicheknack).

@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/original-language.schema.json",
+  "title": "Lamplighter original-language words",
+  "type": "object",
+  "required": [
+    "meta",
+    "verses"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "abbreviation": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "languageEnglishName": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "versification": {
+      "type": "string"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "textDirection": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "referenceBooks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "wordCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verseCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "verses": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)\\.[1-9][0-9]*\\.[1-9][0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "word"
+          ],
+          "properties": {
+            "word": {
+              "type": "string"
+            },
+            "lemma": {
+              "type": "string"
+            },
+            "strongs": {
+              "type": "string",
+              "pattern": "^[GH][0-9]+$"
+            },
+            "pos": {
+              "type": "string"
+            },
+            "morph": {
+              "type": "string"
+            },
+            "morphDesc": {
+              "type": "string"
+            },
+            "wordIndex": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

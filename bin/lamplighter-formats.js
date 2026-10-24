@@ -3,6 +3,7 @@
 // lamplighter-formats: lint, start and describe the JSON files Lamplighter reads.
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { lint, detectKind } = require('../lib/validate');
 const { newEdition } = require('../lib/skeleton');
 
@@ -13,6 +14,9 @@ const USAGE = `lamplighter-formats <command> [options]
       [--abbreviation ABBR] [--language eng] [--language-name English]
       [--license "Public Domain"] [--license-url URL] [--rtl] [--books all|ot|nt|"Genesis,John"]
   info <file>                  Counts and facts about a file.
+  convert <file…> --from FORMAT --out FILE [--name NAME] [options]
+      Import text/vpl, lines, docx/doc, usfm/usx, osis, sword, or normalize json.
+      Run "convert --help" for formats, layout, commentary, and loss-report options.
 
 Exit status: 0 when nothing is wrong, 1 when a file has errors, 2 for a bad command line.`;
 
@@ -33,8 +37,9 @@ function read(file) {
   let raw = fs.readFileSync(file);
   const bom = raw.length >= 3 && raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF;
   if (bom) raw = raw.subarray(3);
-  const text = raw.toString('utf8');
-  if (text.includes('�')) throw new Error('the file is not valid UTF-8');
+  let text;
+  try { text = new TextDecoder('utf-8', { fatal: true }).decode(raw); }
+  catch { throw new Error('the file is not valid UTF-8'); }
   let data;
   try { data = JSON.parse(text); } catch (error) { throw new Error(`not valid JSON (${error.message})`); }
   return { data, bom };
@@ -91,6 +96,11 @@ function cmdInfo(opts) {
 
 function main(argv) {
   const [command, ...rest] = argv;
+  if (command === 'convert') {
+    const result = spawnSync(process.env.PYTHON || 'python3', [path.join(__dirname, '..', 'scripts', 'convert.py'), ...rest], { stdio: 'inherit' });
+    if (result.error) { console.error('Conversion needs Python 3.10 or newer: ' + result.error.message); return 1; }
+    return result.status ?? 1;
+  }
   const opts = args(rest);
   if (command === 'lint') return cmdLint(opts);
   if (command === 'new') return cmdNew(opts);
@@ -99,5 +109,8 @@ function main(argv) {
   return command === 'help' || command === '--help' || command === undefined ? 0 : 2;
 }
 
-if (require.main === module) process.exit(main(process.argv.slice(2)));
+if (require.main === module) {
+  try { process.exitCode = main(process.argv.slice(2)); }
+  catch (error) { console.error(error.message); process.exitCode = 1; }
+}
 module.exports = { main };
