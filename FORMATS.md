@@ -25,7 +25,7 @@ The following optional top-level fields do not change the existing reader shape:
 | `formatVersion` | Integer `1`; may be omitted for legacy resources. |
 | `language`, `languageEnglishName`, `textDirection` | Language identity and `ltr`/`rtl` presentation. ISO 639 codes and BCP 47 language tags can be retained. |
 | `license`, `license_url`, `attribution` | Source rights and required credit; conversion does not grant permission to redistribute. |
-| `versification` | The source's declared numbering system, such as `KJV` or `NRSVA`. Metadata does not renumber a resource. |
+| `versification` | The source's declared numbering system, such as `KJV`, `NRSVA`, `Leningrad` or `Vulgate`. Metadata does not renumber a resource. See [Versification](#versification). |
 | `source` | Provenance object with optional `name`, `url`, `format`, and lowercase `sha256`. |
 | `referenceBooks` | Unique book names in the matching edition's exact order for indexed study references. This declares the mapping; current readers do not automatically remap it. |
 
@@ -97,7 +97,21 @@ wording or harmonize one versification with another. See [CONVERTING.md](CONVERT
 
 Notes the linter offers (warnings, not faults): a chapter or verse count that differs from the
 King James versification, right-to-left text without `"textDirection": "rtl"`, missing
-`license`, verses with empty text.
+`license`, verses with empty text, and numbering that matches no known scheme or contradicts
+the declared `versification`.
+
+### Versification
+
+Editions number some verses differently. Hebrew numbering counts most psalm titles as verse 1
+and ends Malachi at 3:24 (English 4:6); the Vulgate joins Psalms 9 and 10. Lamplighter maps
+notes, cross-references and original-language words between three schemes: English (KJV,
+RSV, NRSV), Original (Hebrew and Greek) and Vulgate. It uses `versification` when an
+edition declares one it knows, and otherwise recognizes the scheme from the edition's own
+chapter and verse counts. `lint` and `info` report the scheme they recognize.
+
+The mapping tables are SIL's, from libpalaso (MIT), kept unmodified in `data/versification/`.
+`scripts/build-versification.py` turns them into `lib/versification-data.js`, which
+`lib/versification.js` reads. That file works as a Node module and as a browser script.
 
 A full-size edition is 4–8 MB. The app loads it once and caches the parsed form.
 

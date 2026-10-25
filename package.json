@@ -1,6 +1,6 @@
 {
   "name": "lamplighter-formats",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Lamplighter JSON schemas, validators, translation/commentary converters, and registry publishing.",
   "license": "Apache-2.0",
   "bin": {

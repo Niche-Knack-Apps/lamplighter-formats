@@ -8,3 +8,9 @@ copied here so a file can be proven to load exactly as the app loads it.
 templates/edition.sample.json quotes the King James Version (public domain).
 lib/canon.json records the King James versification (book, chapter and verse counts), which is
 a fact about the text, not a copyrightable work.
+
+data/versification/eng.vrs.txt, org.vrs.txt and vul.vrs.txt are SIL's versification tables from
+libpalaso (https://github.com/sillsdev/libpalaso, SIL.Scripture/Resources, commit
+b4f7a6da7b868f9ae909e40fb0708f5fd4efd782), used unmodified under the MIT License,
+Copyright (c) 2007-2026 SIL Global. The license text is in data/versification/LICENSE-SIL.txt.
+lib/versification-data.js is generated from those tables.
