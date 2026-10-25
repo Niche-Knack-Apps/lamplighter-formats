@@ -16,7 +16,7 @@ from 1. Keys of the form `"<book_index>.<chapter>.<verse>"` appear in the study 
 
 Unversioned files remain supported. New tools can add `"formatVersion": 1`; unknown
 versions fail validation rather than being interpreted as an older format. The package
-version (currently 0.2.x) is separate from the data format version.
+version (currently 0.3.x) is separate from the data format version.
 
 The following optional top-level fields do not change the existing reader shape:
 
@@ -27,7 +27,7 @@ The following optional top-level fields do not change the existing reader shape:
 | `license`, `license_url`, `attribution` | Source rights and required credit; conversion does not grant permission to redistribute. |
 | `versification` | The source's declared numbering system, such as `KJV`, `NRSVA`, `Leningrad` or `Vulgate`. Metadata does not renumber a resource. See [Versification](#versification). |
 | `source` | Provenance object with optional `name`, `url`, `format`, and lowercase `sha256`. |
-| `referenceBooks` | Unique book names in the matching edition's exact order for indexed study references. This declares the mapping; current readers do not automatically remap it. |
+| `referenceBooks` | Unique source book names in their original index order for commentary references. The reader implementation for 1.11.73 maps recognized book identities into the open edition; older readers may use the numeric indices directly. |
 
 Book objects may include `osis` as a stable book identifier. Legacy `book` and `abbr`
 aliases remain accepted alongside `name` and `abbrev`. Unknown extension fields remain
@@ -107,7 +107,9 @@ and ends Malachi at 3:24 (English 4:6); the Vulgate joins Psalms 9 and 10. Lampl
 notes, cross-references and original-language words between three schemes: English (KJV,
 RSV, NRSV), Original (Hebrew and Greek) and Vulgate. It uses `versification` when an
 edition declares one it knows, and otherwise recognizes the scheme from the edition's own
-chapter and verse counts. `lint` and `info` report the scheme they recognize.
+chapter and verse counts. `lint` and `info` report the scheme they recognize. The reader implementation for 1.11.74 uses this same engine; older reader versions may compare verse numbers directly.
+
+Unknown schemes keep their source numbers and must be shown as unmapped where numbering differs. These tables are not a complete equivalence for every canon: SIL's English data has no special mapping for 2 Corinthians 13, and the generator reports skipped Greek Esther half-verse segments, a 6 Ezra segment, and a backwards Daniel range. Do not silently invent a mapping. Stored study references use KJV numbering; a psalm title with no KJV verse is chapter-only.
 
 The mapping tables are SIL's, from libpalaso (MIT), kept unmodified in `data/versification/`.
 `scripts/build-versification.py` turns them into `lib/versification-data.js`, which
@@ -138,7 +140,7 @@ A full-size edition is 4–8 MB. The app loads it once and caches the parsed for
 Each entry covers a range: a whole book (`book_index` only), a chapter (`chapter` only), or
 verses (`chapter` and `verse`). `end` may be left out for a single point. `content` is plain
 text; paragraphs are separated by blank lines. The app shows the entries whose range covers
-the verses the reader selected, the most specific first.
+the verses the reader selected. Book introductions appear in chapter 1 and sort first; other matches are ordered by specificity.
 
 An optional `title` string labels an entry. Each supplied range endpoint needs a nonnegative
 `book_index`; a verse also needs its chapter. The end cannot precede the start. Converters
