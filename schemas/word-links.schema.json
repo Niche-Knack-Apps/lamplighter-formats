@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/word-links.schema.json",
+  "title": "Lamplighter word links",
+  "description": "Ties words of one edition to Strong's numbers and, optionally, to the words of an original-language file.",
+  "type": "object",
+  "required": [
+    "type",
+    "tokenizer",
+    "verses"
+  ],
+  "properties": {
+    "type": {
+      "const": "word-links"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "edition": {
+      "type": "string",
+      "description": "The abbreviation of the edition whose words these are."
+    },
+    "editionSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "sha256 of the edition file whose words were counted; a reader can skip links made for different wording."
+    },
+    "tokenizer": {
+      "const": "lamplighter-words-1",
+      "description": "Word positions count words as runs of letters, marks and digits with apostrophes inside them, from 0 at the start of the verse text."
+    },
+    "versification": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "verses": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)\\.[1-9][0-9]*\\.[1-9][0-9]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Word position in the edition's verse."
+            },
+            {
+              "type": "string",
+              "pattern": "^([GH][0-9]+( [GH][0-9]+)*)?$",
+              "description": "Strong's numbers, space separated; \"\" for a word the translators supplied."
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position of the original word in the original-language verse, when known."
+            }
+          ]
+        }
+      }
+    }
+  }
+}

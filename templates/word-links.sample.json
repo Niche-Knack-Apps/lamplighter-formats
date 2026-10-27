@@ -1,0 +1,31 @@
+{
+  "type": "word-links",
+  "formatVersion": 1,
+  "edition": "SAMPLE",
+  "tokenizer": "lamplighter-words-1",
+  "name": "Sample edition word links",
+  "license": "CC0",
+  "verses": {
+    "0.1.1": [
+      [
+        0,
+        "H1697",
+        0
+      ],
+      [
+        1,
+        "H1697",
+        0
+      ],
+      [
+        2,
+        ""
+      ],
+      [
+        3,
+        "H1961",
+        1
+      ]
+    ]
+  }
+}

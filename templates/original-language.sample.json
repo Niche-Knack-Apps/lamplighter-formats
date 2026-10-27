@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "meta": {
     "source": "Synthetic example",
-    "wordCount": 1,
+    "wordCount": 2,
     "verseCount": 1
   },
   "verses": {
@@ -11,8 +11,22 @@
         "word": "דָּבָר",
         "lemma": "דָּבָר",
         "strongs": "H1697",
-        "wordIndex": 0
+        "wordIndex": 0,
+        "morph": "N-ms",
+        "translit": "dā·ḇār",
+        "gloss": "The word",
+        "glossOrder": 0
+      },
+      {
+        "word": "הָיָה",
+        "strongs": "H1961",
+        "morph": "V-Qal-Perf-3ms",
+        "translit": "hā·yāh",
+        "gloss": "was",
+        "glossOrder": 1,
+        "wordIndex": 1
       }
     ]
-  }
+  },
+  "morphScheme": "sample"
 }

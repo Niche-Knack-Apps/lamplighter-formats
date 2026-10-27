@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import io
 import json
@@ -206,6 +207,51 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaises(c.ConversionError):
             c.run_bounded([sys.executable, "-c", "raise SystemExit(4)"])
         self.assertEqual(c.run_bounded([sys.executable, "-c", "print('hello')"]), b"hello\n")
+
+    def test_word_positions_match_the_javascript_tokenizer(self):
+        fixture = json.loads((ROOT / "tests/fixtures/tokenizer.json").read_text())
+        for case in fixture["cases"]:
+            self.assertEqual([case["text"][a:b] for a, b in c.word_spans(case["text"])], case["words"], case["text"])
+
+    def test_usfm_strongs_tags_become_word_links_for_an_edition(self):
+        source = ('\\id GEN\n\\c 1\n\\d \\w A|strong="H9000"\\w* song.\n'
+                  '\\v 1 At the \\w start|strong="H9001"\\w* the \\w maker|strong="H09003"\\w* \\w made|strong="H9002a"\\w* '
+                  '\\add all\\add* the \\w lamps|strong="H9004,H9005"\\w*.\n')
+        report = c.Report(allow_lossy=True)
+        parsed = c.parse_usfm(source, report, tags=True)
+        # The same source without tags converts to plain text as before
+        plain = c.parse_usfm(source, c.Report(allow_lossy=True))
+        self.assertEqual(plain["books"][0]["chapters"][0]["verses"][0]["text"], "At the start the maker made all the lamps.")
+        target = {"books": [{"name": "Genesis", "chapters": [{"verses": [{"verse": 1, "text": "At the start the Maker made all the lamps."}]}]}]}
+        links = c.build_links(parsed, target, report)
+        self.assertEqual(links["verses"]["0.1.1"], [[2, "H9001"], [4, "H9003"], [5, "H9002"], [6, ""], [8, "H9004 H9005"]])
+
+    def test_osis_lemmas_and_added_words_become_word_links(self):
+        osis = (b'<osis xmlns="http://www.bibletechnologies.net/2003/OSIS/namespace"><osisText><div type="book" osisID="Gen">'
+                b'<verse osisID="Gen.1.1"><w lemma="strong:H9001">At the start</w> <transChange type="added">all</transChange> '
+                b'<w lemma="lemma.X:abc strong:H9002">lamps</w> shone</verse></div></osisText></osis>')
+        report = c.Report(allow_lossy=True)
+        parsed = c.parse_osis(osis, report, tags=True)
+        target = {"books": [{"name": "Genesis", "chapters": [{"verses": [{"verse": 1, "text": "At the start all lamps shone, then"}]}]}]}
+        self.assertEqual(c.build_links(parsed, target, report)["verses"]["0.1.1"], [[0, "H9001"], [1, "H9001"], [2, "H9001"], [3, ""], [4, "H9002"]])
+        # A book's key is its place in the target edition
+        partial = {"books": [{"name": "Exodus", "chapters": [{"verses": [{"verse": 1, "text": "x"}]}]}, target["books"][0]]}
+        self.assertEqual(list(c.build_links(parsed, partial, report)["verses"]), ["1.1.1"])
+        other = {"books": [{"name": "Genesis", "chapters": [{"verses": [{"verse": 1, "text": "Nothing alike here"}]}]}]}
+        with self.assertRaises(c.ConversionError):
+            c.build_links(parsed, other, report)
+
+    def test_cli_word_links_validate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src, edition, out = Path(tmp, "gen.usfm"), Path(tmp, "edition.json"), Path(tmp, "links.json")
+            src.write_text('\\id GEN\n\\c 1\n\\v 1 The \\w lamp|strong="H9004"\\w* \\w shone|strong="H9006"\\w*.\n')
+            edition.write_text(json.dumps({"abbreviation": "SMP", "books": [{"name": "Genesis", "chapters": [{"verses": [{"verse": 1, "text": "The lamp shone."}]}]}]}))
+            self.assertEqual(c.main([str(src), "--from", "usfm", "--links-for", str(edition), "--out", str(out), "--license", "CC0"]), 0)
+            data = json.loads(out.read_text())
+            self.assertEqual((data["type"], data["edition"], data["tokenizer"]), ("word-links", "SMP", "lamplighter-words-1"))
+            self.assertEqual(data["editionSha256"], hashlib.sha256(edition.read_bytes()).hexdigest())
+            self.assertEqual(data["verses"], {"0.1.1": [[1, "H9004"], [2, "H9006"]]})
+            self.assertEqual(c.main([str(src), "--from", "text", "--links-for", str(edition), "--out", str(Path(tmp, "x.json"))]), 1)
 
     def test_sword_refuses_locked_and_ambiguous_modules(self):
         with tempfile.TemporaryDirectory() as directory:

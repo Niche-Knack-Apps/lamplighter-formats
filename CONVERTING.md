@@ -127,7 +127,8 @@ node bin/lamplighter-formats.js convert 01GEN.usx 02EXO.usx --from usx \
 Supported content includes book IDs, numbered chapters/verses, standard text/poetry
 paragraphs, and ordinary inline character markup. Formatting is flattened while words are
 retained; word attributes such as lemma/Strong's data are not turned into a parallel
-original-language resource. Unknown markers/elements, alternate numbers, subverse labels,
+original-language resource (see [word links](#word-links-from-strongs-tagged-text) for
+Strong's numbers). Unknown markers/elements, alternate numbers, subverse labels,
 tables, sidebars, arbitrary extensions, and malformed/unmatched milestones fail explicitly. This
 is a checked import subset, not a full USFM/USX implementation.
 
@@ -170,6 +171,29 @@ An alternative is `mod2osis MyBible > my-bible.osis.xml`, then `--from osis`.
 
 SWORD and e-Sword are different formats. e-Sword/MySword databases and arbitrary binary
 archives are not supported by this converter.
+
+## Word links from Strong's-tagged text
+
+A source that tags its words with Strong's numbers (USFM `\w word|strong="H7225"\w*`, OSIS
+`<w lemma="strong:H7225">`, or an installed SWORD module with Strong's) gives
+[word links](FORMATS.md#word-links) for an edition you already have:
+
+```sh
+node bin/lamplighter-formats.js convert 02GEN.usfm 03EXO.usfm --from usfm \
+  --links-for kjv.json --abbreviation KJV --license "Public Domain" \
+  --allow-lossy --out kjv.links.json
+```
+
+Within each verse, the source's words are matched to the edition's words in order, ignoring
+case, so the two can differ in punctuation, spelling of a few words, or headings. A matched
+word takes the source's numbers. A word inside USFM `\add` or OSIS
+`<transChange type="added">` links with `""` (supplied by the translators). Words that do not
+match stay unlinked, and the reader projects them instead. The source and the edition must
+be the same translation and use the same verse numbering. The receipt counts the linked
+words.
+
+Tags describe someone's translation work. Check the source's license before you distribute
+the links.
 
 ## Normalize existing JSON without changing supplied text
 

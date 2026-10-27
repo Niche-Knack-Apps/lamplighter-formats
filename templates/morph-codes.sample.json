@@ -1,0 +1,11 @@
+{
+  "type": "morph-codes",
+  "formatVersion": 1,
+  "scheme": "sample",
+  "name": "Sample parsing codes",
+  "license": "CC0",
+  "codes": {
+    "N-ms": "Noun - masculine singular",
+    "V-Qal-Perf-3ms": "Verb - Qal - Perfect - third person masculine singular"
+  }
+}
