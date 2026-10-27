@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/commentary-pack.schema.json",
+  "title": "Lamplighter commentary pack manifest (pack.json)",
+  "type": "object",
+  "required": [
+    "name",
+    "type",
+    "formatVersion",
+    "entryCount",
+    "parts"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "abbreviation": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "languageEnglishName": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "versification": {
+      "type": "string"
+    },
+    "textDirection": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "referenceBooks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "type": {
+      "const": "commentary-pack"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "entryCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "range",
+          "entryCount",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.json$",
+            "not": {
+              "const": "pack.json"
+            }
+          },
+          "range": {
+            "type": "object",
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "object",
+                "required": [
+                  "book_index"
+                ],
+                "properties": {
+                  "book": {
+                    "type": "string"
+                  },
+                  "book_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "chapter": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "verse": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
+                }
+              },
+              "end": {
+                "type": "object",
+                "required": [
+                  "book_index"
+                ],
+                "properties": {
+                  "book": {
+                    "type": "string"
+                  },
+                  "book_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "chapter": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "verse": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
+                }
+              }
+            }
+          },
+          "entryCount": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

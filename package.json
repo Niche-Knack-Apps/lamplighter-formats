@@ -1,6 +1,6 @@
 {
   "name": "lamplighter-formats",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Lamplighter JSON schemas, validators, translation/commentary converters, and registry publishing.",
   "license": "Apache-2.0",
   "bin": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "lint:templates": "node bin/lamplighter-formats.js lint templates/edition.sample.json templates/commentary.sample.json templates/cross-references.sample.json templates/original-language.sample.json templates/lexicon.sample.json",
+    "lint:templates": "node bin/lamplighter-formats.js lint templates/edition.sample.json templates/commentary.sample.json templates/cross-references.sample.json templates/original-language.sample.json templates/lexicon.sample.json templates/commentary-pack.sample",
     "test:schemas": "python3 scripts/check-schemas.py"
   },
   "engines": {
