@@ -17,11 +17,11 @@ Made by [Niche-Knack](https://nk.tools) — Smart Tools. Sharp Solutions.
 
 | Path | What it is |
 | --- | --- |
-| [`FORMATS.md`](FORMATS.md) | The formats, each with a complete minimal example: editions, commentaries, cross-references, original-language words, lexicons. |
-| `schemas/` | JSON Schema (draft-07) for editions, commentaries, cross-references, original-language words, and lexicons. |
-| `bin/lamplighter-formats.js` | The command line: `lint`, `new`, `info`, and `convert`. Node 18 or newer; conversion also needs Python 3.10 or newer. |
+| [`FORMATS.md`](FORMATS.md) | The formats, each with a complete minimal example: editions, commentaries, commentary packs, cross-references, original-language words, lexicons. |
+| `schemas/` | JSON Schema (draft-07) for editions, commentaries, commentary packs (metadata, index and parts), cross-references, original-language words, and lexicons. |
+| `bin/lamplighter-formats.js` | The command line: `lint`, `new`, `info`, `convert`, `pack` and `unpack`. Node 18 or newer; conversion also needs Python 3.10 or newer. |
 | [`CONVERTING.md`](CONVERTING.md) | Import Word documents, referenced or unnumbered verse lines, USFM, USX, OSIS, and installed SWORD Bible modules. |
-| `lib/` | The same checks as a library (`validate.js`), the skeleton builder (`skeleton.js`), the King James versification (`canon.json`) and verse mapping between numbering schemes (`versification.js`). |
+| `lib/` | The same checks as a library (`validate.js`), the skeleton builder (`skeleton.js`), the King James versification (`canon.json`), verse mapping between numbering schemes (`versification.js`), and commentary packs (`pack.js`, and `pack-reader.js` for readers). |
 | `data/versification/` | SIL's versification tables (MIT), unmodified; `scripts/build-versification.py` generates `lib/versification-data.js` from them. |
 | `templates/` | A small sample of each kind, lint-clean, to copy from. |
 | `vendor/bible-model.js` | Lamplighter's own reader model, so a test can prove a file loads exactly as the app loads it. |
@@ -44,6 +44,11 @@ node bin/lamplighter-formats.js new "Nuevo Testamento Sencillo" --out nts.json \
 
 # Counts and facts
 node bin/lamplighter-formats.js info nts.json
+
+# Split a large commentary into a folder of small parts a reader loads as needed, and back
+node bin/lamplighter-formats.js pack commentary.json --out commentary-pack
+node bin/lamplighter-formats.js lint commentary-pack
+node bin/lamplighter-formats.js unpack commentary-pack --out commentary.json
 
 # Convert referenced verse lines, preserving Unicode and numbered gaps
 node bin/lamplighter-formats.js convert translation.txt --from vpl \

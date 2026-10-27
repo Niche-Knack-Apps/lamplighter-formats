@@ -3,8 +3,9 @@
 Everything Lamplighter reads is plain JSON, UTF-8, no byte-order mark. Five kinds of file:
 an **edition** (a Bible translation), a **commentary**, **cross-references**, **original-language
 words**, and a **lexicon**. The first is what most people make; the others are for study
-resources. `lamplighter-formats lint` tells the kinds apart by their shape. All five kinds
-have Draft-07 schemas in `schemas/`. Use both the schema and the linter: JSON Schema cannot
+resources. A large commentary can also travel as a [pack](#commentary-packs), a folder of
+small files. `lamplighter-formats lint` tells the kinds apart by their shape. All five kinds,
+and the three kinds of file in a pack, have Draft-07 schemas in `schemas/`. Use both the schema and the linter: JSON Schema cannot
 express array-position numbering, duplicate book names, or the ordering of range endpoints.
 
 Book, chapter and verse numbering: `book_index` counts from 0 in the order the edition lists
@@ -16,7 +17,7 @@ from 1. Keys of the form `"<book_index>.<chapter>.<verse>"` appear in the study 
 
 Unversioned files remain supported. New tools can add `"formatVersion": 1`; unknown
 versions fail validation rather than being interpreted as an older format. The package
-version (currently 0.3.x) is separate from the data format version.
+version (currently 0.5.x) is separate from the data format version.
 
 The following optional top-level fields do not change the existing reader shape:
 
@@ -147,6 +148,110 @@ An optional `title` string labels an entry. Each supplied range endpoint needs a
 require a reference edition for commentary so an NT-only or differently ordered Bible does
 not accidentally receive indices from a 66-book Bible.
 
+## Commentary packs
+
+A full commentary can run to 50 MB, more than a phone should hold in memory at once. A pack
+keeps the same commentary as a folder of small files, and a reader never loads all of it:
+
+- `_metadata.json` says what the work is.
+- `_index.json` is the finding aid. It lists the part files and, book by book and chapter by
+  chapter, which parts hold the notes.
+- Every other file is a part, holding the entries for one book or a run of chapters.
+
+A reader opens the two underscore files, looks the passage up in the index, loads only the
+parts it names, and drops parts it no longer needs.
+
+```
+gill/
+  _metadata.json
+  _index.json
+  000-gen-001-003.json
+  000-gen-004-008.json
+  …
+  018-psa-book.json
+  018-psa-023-032.json
+  …
+```
+
+### `_metadata.json`
+
+The commentary's own fields (`name`, `license`, `attribution`, `versification`,
+`referenceBooks` and the rest, as above), with `"type": "commentary-pack"`,
+`"formatVersion": 1`, and `entryCount`, the entries in the whole pack. It holds no notes.
+
+```json
+{
+ "name": "Sample Commentary",
+ "type": "commentary-pack",
+ "formatVersion": 1,
+ "entryCount": 3
+}
+```
+
+### `_index.json`
+
+```json
+{
+ "type": "commentary-index",
+ "formatVersion": 1,
+ "parts": [
+  {"file":"000-gen.json","entryCount":2,"bytes":375,"sha256":"1a375b617cfc2ed22637ff5d6c6bd23b658ca2750137828054eb3799947a1922"},
+  {"file":"042-jhn.json","entryCount":1,"bytes":214,"sha256":"7753a7b9e63d3e75c300c9541f3b740ee1d4b9d4972aa9b5623ee6fe7a4a5d66"}
+ ],
+ "books": {
+  "0": {"names":["Genesis"],"whole":[0],"chapters":{"1":[[0,1,2]]}},
+  "42": {"names":["John"],"chapters":{"1":[1]}}
+ }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `type`, `formatVersion` | `"commentary-index"` and `1`. |
+| `parts` | The part files in pack order, numbered from 0. Each gives its `file` name in the same folder (starting with a letter or digit, then letters, digits, `.`, `_` and `-`, ending `.json`; no folders), its `entryCount`, and its `bytes` and `sha256` exactly as stored. A reader checks both before using a part, and they let a device that imports files one at a time (a phone that cannot pick a folder) match each file to the index. |
+| `books` | Keyed by `book_index` in the commentary's own numbering, for each book the pack has notes on. |
+| `books[…].names` | The book names the notes use, so a reader can match books without opening a part. |
+| `books[…].whole` | The parts holding notes on the book as a whole (introductions). Lamplighter shows these with chapter 1. |
+| `books[…].chapters` | Keyed by chapter: the parts holding notes on it. A part's number alone means any verse of the chapter may need it. `[part, first]` means only verses from `first` on, and `[part, first, last]` only those verses. |
+
+A note running past a chapter break stays in the part where it starts, and the index lists
+that part under every chapter the note reaches, so the lookup never misses it. A note running
+on into a later book is listed under each of that book's chapters up to 150, as Lamplighter's
+own index does, because a pack does not know how many chapters a book has.
+
+`partsFor(index, book_index, chapter, verses)` and `wholeBookParts(index, book_index)` in
+`lib/pack-reader.js` are the lookup. The file loads in Node and in a browser
+(`window.CommentaryPack`), so a reader can use it unchanged.
+
+### Parts
+
+A part file holds entries exactly as a commentary does:
+
+```json
+{ "type": "commentary-part", "formatVersion": 1, "entries": [ { "range": { … }, "content": "…" } ] }
+```
+
+Entries that start at the same place are always in the same part, in their original order.
+Within a part, entries are in reading order by where they start.
+
+### Making and checking packs
+
+`lamplighter-formats pack` puts each book in one part. A book larger than the limit (256 KiB by
+default; `--max-part-bytes`) becomes a part of its book-level notes plus evenly sized runs of
+whole chapters, and a chapter larger than the limit is split between verses. At 256 KiB John
+Gill's Exposition (50 MB) makes 295 parts and a 58 KB index; a reader turning to Psalm 23 loads
+the index and one 251 KB part. `pack` writes `_metadata.json` last, so a reader that finds packs
+by that file never sees a half-written one.
+
+`unpack` checks a pack and joins it back into one commentary file. `lint` and `info` take the
+pack's folder, its `_metadata.json` or its `_index.json`. They check every part against the
+index, rebuild the index from the parts' notes and report any chapter where the two differ, and
+point out JSON files in the folder that the index does not list.
+
+Released Lamplighter readers look for `"type": "commentary"` with `entries`, so they pass over
+every file of a pack. No released version reads packs yet; until one does, `unpack` gives the
+single file they take.
+
 ## Cross-references
 
 ```json
@@ -194,6 +299,7 @@ Keyed by Strong's number; `def` is the definition the app shows.
 ## Where files go
 
 - Desktop: Settings → Library → *Add translation folder* (editions) or *Add commentary folder*.
+  Keep a commentary pack in a folder of its own, with nothing else in it.
 - Any device: publish to an OCI registry with `scripts/oci-editions.py push` and add the
   registry in Settings → Library. The app keeps an opened edition on the device.
 - Lamplighter's own bundled editions are the same format, in the app's `renderer/bundled/`.

@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/commentary-part.schema.json",
+  "title": "Lamplighter commentary pack part",
+  "type": "object",
+  "required": [
+    "type",
+    "formatVersion",
+    "entries"
+  ],
+  "properties": {
+    "type": {
+      "const": "commentary-part"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "range",
+          "content"
+        ],
+        "properties": {
+          "range": {
+            "type": "object",
+            "required": [
+              "start"
+            ],
+            "properties": {
+              "start": {
+                "type": "object",
+                "required": [
+                  "book_index"
+                ],
+                "properties": {
+                  "book": {
+                    "type": "string"
+                  },
+                  "book_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "chapter": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "verse": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
+                }
+              },
+              "end": {
+                "type": "object",
+                "required": [
+                  "book_index"
+                ],
+                "properties": {
+                  "book": {
+                    "type": "string"
+                  },
+                  "book_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "chapter": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "verse": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "dependencies": {
+                  "verse": [
+                    "chapter"
+                  ]
+                }
+              }
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
