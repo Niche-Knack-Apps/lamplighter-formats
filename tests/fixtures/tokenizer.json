@@ -1,0 +1,10 @@
+{
+  "about": "Word positions under tokenizer lamplighter-words-1. The JavaScript and Python implementations must both give these.",
+  "cases": [
+    { "text": "In the start, the maker's lamps shone.", "words": ["In", "the", "start", "the", "maker's", "lamps", "shone"] },
+    { "text": "“Don’t fear,” he said—“2 lamps.”", "words": ["Don’t", "fear", "he", "said", "2", "lamps"] },
+    { "text": "'quoted' words' ends", "words": ["quoted", "words", "ends"] },
+    { "text": "בְּרֵאשִׁ֖ית בָּרָ֣א׃ λόγος·καὶ", "words": ["בְּרֵאשִׁ֖ית", "בָּרָ֣א", "λόγος", "καὶ"] },
+    { "text": "  ", "words": [] }
+  ]
+}

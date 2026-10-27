@@ -93,37 +93,85 @@
       "additionalProperties": {
         "type": "array",
         "items": {
-          "type": "object",
-          "required": [
-            "word"
-          ],
-          "properties": {
-            "word": {
-              "type": "string"
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "word"
+              ],
+              "properties": {
+                "word": {
+                  "type": "string"
+                },
+                "lemma": {
+                  "type": "string"
+                },
+                "strongs": {
+                  "type": "string",
+                  "pattern": "^[GH][0-9]+$"
+                },
+                "pos": {
+                  "type": "string"
+                },
+                "morph": {
+                  "type": "string"
+                },
+                "morphDesc": {
+                  "type": "string"
+                },
+                "wordIndex": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "translit": {
+                  "type": "string"
+                },
+                "gloss": {
+                  "type": "string",
+                  "description": "The word's own English in a translation linked word by word. Words in [brackets] were supplied by the translator; \"\" means no English of its own (such as the Hebrew object marker); \"…\" means it is rendered together with a neighbouring word."
+                },
+                "glossOrder": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Where the gloss stands in that translation's word order within the verse (0 first)."
+                },
+                "variant": {
+                  "type": "string",
+                  "description": "The word with the source's variant marks, when they differ from word."
+                },
+                "language": {
+                  "type": "string",
+                  "description": "This word's language when it differs from the file's, such as arc for Aramaic."
+                }
+              }
             },
-            "lemma": {
-              "type": "string"
-            },
-            "strongs": {
-              "type": "string",
-              "pattern": "^[GH][0-9]+$"
-            },
-            "pos": {
-              "type": "string"
-            },
-            "morph": {
-              "type": "string"
-            },
-            "morphDesc": {
-              "type": "string"
-            },
-            "wordIndex": {
-              "type": "integer",
-              "minimum": 0
+            {
+              "type": "array",
+              "minItems": 1
             }
-          }
+          ]
         }
       }
+    },
+    "morphScheme": {
+      "type": "string",
+      "description": "The parsing-code scheme of every word's morph, such as robinson or berean-hebrew; a morph-codes file of the same scheme describes the codes."
+    },
+    "glossEdition": {
+      "type": "string",
+      "description": "The abbreviation of the translation the glosses come from; a reader links that edition by matching its words to the glosses."
+    },
+    "wordFields": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "contains": {
+        "const": "word"
+      },
+      "items": {
+        "type": "string"
+      },
+      "description": "Field names each word array holds, in order. With it, every word is an array of those values (null or a shorter array for absent ones) instead of an object."
     }
   }
 }

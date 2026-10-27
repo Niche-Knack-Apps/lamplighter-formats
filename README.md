@@ -17,11 +17,11 @@ Made by [Niche-Knack](https://nk.tools) — Smart Tools. Sharp Solutions.
 
 | Path | What it is |
 | --- | --- |
-| [`FORMATS.md`](FORMATS.md) | The formats, each with a complete minimal example: editions, commentaries, cross-references, original-language words, lexicons. |
-| `schemas/` | JSON Schema (draft-07) for editions, commentaries, cross-references, original-language words, and lexicons. |
+| [`FORMATS.md`](FORMATS.md) | The formats, each with a complete minimal example: editions, commentaries, cross-references, original-language words, lexicons, word links, renderings and parsing codes, and how words are linked. |
+| `schemas/` | JSON Schema (draft-07) for each kind. |
 | `bin/lamplighter-formats.js` | The command line: `lint`, `new`, `info`, and `convert`. Node 18 or newer; conversion also needs Python 3.10 or newer. |
-| [`CONVERTING.md`](CONVERTING.md) | Import Word documents, referenced or unnumbered verse lines, USFM, USX, OSIS, and installed SWORD Bible modules. |
-| `lib/` | The same checks as a library (`validate.js`), the skeleton builder (`skeleton.js`), the King James versification (`canon.json`) and verse mapping between numbering schemes (`versification.js`). |
+| [`CONVERTING.md`](CONVERTING.md) | Import Word documents, referenced or unnumbered verse lines, USFM, USX, OSIS, and installed SWORD Bible modules; make word links from Strong's-tagged text. |
+| `lib/` | The same checks as a library (`validate.js`), the skeleton builder (`skeleton.js`), the King James versification (`canon.json`) and verse mapping between numbering schemes (`versification.js`), and word linking (`word-links.js`). |
 | `data/versification/` | SIL's versification tables (MIT), unmodified; `scripts/build-versification.py` generates `lib/versification-data.js` from them. |
 | `templates/` | A small sample of each kind, lint-clean, to copy from. |
 | `vendor/bible-model.js` | Lamplighter's own reader model, so a test can prove a file loads exactly as the app loads it. |

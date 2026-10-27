@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/renderings.schema.json",
+  "title": "Lamplighter renderings",
+  "description": "How often each word of one language renders each Strong's number in translations linked word by word.",
+  "type": "object",
+  "required": [
+    "type",
+    "language",
+    "renderings"
+  ],
+  "properties": {
+    "type": {
+      "const": "renderings"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "renderings": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[GH][0-9]+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

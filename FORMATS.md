@@ -1,10 +1,12 @@
 # The formats
 
-Everything Lamplighter reads is plain JSON, UTF-8, no byte-order mark. Five kinds of file:
+Everything Lamplighter reads is plain JSON, UTF-8, no byte-order mark. Eight kinds of file:
 an **edition** (a Bible translation), a **commentary**, **cross-references**, **original-language
-words**, and a **lexicon**. The first is what most people make; the others are for study
-resources. `lamplighter-formats lint` tells the kinds apart by their shape. All five kinds
-have Draft-07 schemas in `schemas/`. Use both the schema and the linter: JSON Schema cannot
+words**, a **lexicon**, and three that tie translations to the original words: **word links**,
+**renderings** and **parsing codes**. The first is what most people make; the others are for
+study resources. `lamplighter-formats lint` tells the kinds apart by their shape (the last
+three by their `type`). All eight kinds have Draft-07 schemas in `schemas/`. Use both the
+schema and the linter: JSON Schema cannot
 express array-position numbering, duplicate book names, or the ordering of range endpoints.
 
 Book, chapter and verse numbering: `book_index` counts from 0 in the order the edition lists
@@ -16,7 +18,7 @@ from 1. Keys of the form `"<book_index>.<chapter>.<verse>"` appear in the study 
 
 Unversioned files remain supported. New tools can add `"formatVersion": 1`; unknown
 versions fail validation rather than being interpreted as an older format. The package
-version (currently 0.3.x) is separate from the data format version.
+version (currently 0.4.x) is separate from the data format version.
 
 The following optional top-level fields do not change the existing reader shape:
 
@@ -175,8 +177,112 @@ not accidentally receive indices from a 66-book Bible.
 ```
 
 One array per verse, in word order. `strongs` is a Strong's number (`G…` Greek, `H…` Hebrew);
-`morph` and `morphDesc` describe the form. The app's bundled files are the SBL Greek New
-Testament and the Open Scriptures Hebrew Bible.
+`morph` and `morphDesc` describe the form.
+
+Optional fields make the file an interlinear: each word with its own English, in the
+original's order.
+
+| Field | Meaning |
+| --- | --- |
+| `translit` | The word in Latin letters. |
+| `gloss` | The word's own English in a translation linked word by word. Words in `[brackets]` were supplied by the translator. `""` means the word has no English of its own, such as the Hebrew object marker. `"…"` means its sense is rendered together with a neighbouring word. |
+| `glossOrder` | Where that English stands in the translation's word order within the verse, from 0. Reading the glosses in `glossOrder` gives the translation; reading them in array order gives the interlinear. |
+| `variant` | The word with the source's variant marks, when they differ from `word`. |
+| `language` | This word's language when it differs from the file's, such as `arc` for Aramaic. |
+| `morphScheme` (top level) | The scheme of every `morph` code, such as `robinson`; a [parsing codes](#parsing-codes) file of the same scheme describes them. |
+| `wordFields` (top level) | Field names in order, such as `["word", "strongs", "morph", "translit", "gloss", "glossOrder"]`. Each word is then an array of those values instead of an object (`null`, or a shorter array, for absent ones), which keeps a whole-Bible interlinear about half the size. `originalWords()` in `lib/word-links.js` reads both forms. |
+| `glossEdition` (top level) | The abbreviation of the translation the glosses come from. A reader links that edition exactly by matching its words, in order, to the glosses read in `glossOrder`, so it needs no word-links file. |
+
+```json
+{
+  "meta": { "source": "Invented example" },
+  "morphScheme": "sample",
+  "verses": {
+    "0.1.1": [
+      { "word": "דָּבָר", "strongs": "H1697", "morph": "N-ms", "translit": "dā·ḇār", "gloss": "The word", "glossOrder": 0 },
+      { "word": "הָיָה", "strongs": "H1961", "morph": "V-Qal-Perf-3ms", "translit": "hā·yāh", "gloss": "was", "glossOrder": 1 }
+    ]
+  }
+}
+```
+
+## Word links
+
+Which original word each word of one edition translates. A link is
+`[word position, "Strong's numbers", original word position]`:
+
+```json
+{
+  "type": "word-links",
+  "formatVersion": 1,
+  "edition": "SAMPLE",
+  "tokenizer": "lamplighter-words-1",
+  "verses": {
+    "0.1.1": [[0, "H1697", 0], [1, "H1697", 0], [2, ""], [3, "H1961", 1]]
+  }
+}
+```
+
+- **Word positions** count the words of the edition's verse text from 0. A word is a run of
+  letters, marks and digits, with apostrophes inside it (`Lord's`, `don’t`); everything else
+  separates words. This is tokenizer `lamplighter-words-1`, the same in `lib/word-links.js`
+  and `scripts/convert.py`.
+- **Strong's numbers** are one string, space separated when a word carries more than one
+  (`"H853 H776"`). `""` marks a word the translators supplied, such as the KJV's italics.
+- **`editionSha256`**, optional, is the sha256 of the edition file whose words were
+  counted. Word positions only fit that wording, so a reader can skip links made for another
+  printing. The converter records it.
+- **The original word position**, optional, is the word's index in the original-language
+  file's verse. Without it, the reader takes the nearest original word with that number.
+- Keys count books in the edition's own order, like every other study resource. Words with
+  no link are left out.
+
+Make one from a Strong's-tagged USFM, OSIS or SWORD source with
+`convert --links-for` ([Converting](CONVERTING.md#word-links-from-strongs-tagged-text)).
+
+## Renderings
+
+How often each word of one language renders each Strong's number, counted from translations
+linked word by word. They let an edition with no tags of its own be linked (below).
+
+```json
+{
+  "type": "renderings",
+  "formatVersion": 1,
+  "language": "en",
+  "renderings": { "H1697": { "word": 3, "words": 2, "matter": 1 } }
+}
+```
+
+## Parsing codes
+
+Plain descriptions of one scheme's parsing codes, so a reader can spell out a word's `morph`.
+
+```json
+{
+  "type": "morph-codes",
+  "formatVersion": 1,
+  "scheme": "sample",
+  "codes": { "V-Qal-Perf-3ms": "Verb - Qal - Perfect - third person masculine singular" }
+}
+```
+
+## How words are linked
+
+`lib/word-links.js` links one verse at a time; Lamplighter runs the same file.
+
+1. A word with word links uses them. In the edition named by `glossEdition`, its words
+   matched to the glosses are its links.
+2. Any other word is projected. It can link to an original word when it is a word of that
+   word's `gloss` (same stem: *created*, *creates*) or a known rendering of its Strong's
+   number. Each candidate loses score with its distance from where `glossOrder` puts the
+   gloss in the verse, so the right one of two identical words wins. Small words such as
+   *the* and *of* join the word they introduce when the gloss renders them together. A word
+   with no candidate above the floor stays unlinked rather than guessed.
+
+A new language needs renderings in that language; editions with their own tags need only
+word links. Stems follow English rules; other languages compare whole words until they get
+rules of their own.
 
 ## Lexicon
 

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Niche-Knack-Apps/lamplighter-formats/schemas/morph-codes.schema.json",
+  "title": "Lamplighter parsing codes",
+  "description": "Plain descriptions of one scheme's parsing codes.",
+  "type": "object",
+  "required": [
+    "type",
+    "scheme",
+    "codes"
+  ],
+  "properties": {
+    "type": {
+      "const": "morph-codes"
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "scheme": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "license_url": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "codes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

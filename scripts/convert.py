@@ -7,6 +7,7 @@ antiword and mod2osis, respectively; neither tool is downloaded or run by a shel
 import argparse
 import configparser
 import copy
+import difflib
 import hashlib
 import io
 import json
@@ -17,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -337,11 +339,30 @@ def unnumbered_lines(text, layout, report):
     return result
 
 
+TAG_OPEN, TAG_MID, TAG_CLOSE, ADD_OPEN, ADD_CLOSE = "\ue000", "\ue001", "\ue002", "\ue003", "\ue004"
+MARKERS = re.compile("[\ue000-\ue004]")
+
+
+def strongs_numbers(values):
+    """Strong's numbers in a tag ("H0430", "strong:H1254a", "H0853,H0776") as ["H430", ...]."""
+    out = []
+    for value in values:
+        for item in re.split(r"[\s,]+", value):
+            match = re.fullmatch(r"(?:strong:)?([GH])0*([0-9]+)[a-z]?", item.strip())
+            if match and match.group(1) + match.group(2) not in out:
+                out.append(match.group(1) + match.group(2))
+    return out
+
+
+def tag_open(numbers):
+    return TAG_OPEN + " ".join(numbers) + TAG_MID
+
+
 def flatten(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def parse_osis(data, report):
+def parse_osis(data, report, tags=False):
     root = xml_root(data)
     if tag(root) != "osis":
         raise ConversionError("Expected an OSIS document with an <osis> root.")
@@ -392,6 +413,12 @@ def parse_osis(data, report):
             report.loss("osis-milestone-markers", "OSIS typographic milestone markers are omitted from plain verse text.")
         if active is not None and name in {"p", "l", "lb"}:
             pieces.append(" ")
+        numbers = strongs_numbers([element.get("lemma", "")]) if tags and active is not None and name == "w" else []
+        added = tags and active is not None and name == "transChange" and element.get("type") == "added"
+        if numbers:
+            pieces.append(tag_open(numbers))
+        if added:
+            pieces.append(ADD_OPEN)
         if active is not None and element.text:
             pieces.append(element.text)
         elif element.text and element.text.strip():
@@ -402,6 +429,10 @@ def parse_osis(data, report):
                 pieces.append(child.tail)
             elif child.tail and child.tail.strip():
                 report.loss("osis-unreferenced", "OSIS text outside numbered verses is omitted.")
+        if numbers:
+            pieces.append(TAG_CLOSE)
+        if added:
+            pieces.append(ADD_CLOSE)
         if active is not None and name == "q" and element.get("marker"):
             pieces.append(element.get("marker"))
         if name == "verse" and not element.get("sID"):
@@ -418,7 +449,7 @@ HEADINGS = re.compile(r"(?:h[0-9]*|toc[0-9]*|toca[0-9]*|mt[0-9]*|mte[0-9]*|ms[0-
 CHARS = {"add", "bk", "dc", "k", "nd", "ord", "pn", "png", "qt", "sig", "sls", "tl", "wj", "em", "bd", "it", "bdit", "no", "sc", "sup", "wa", "wg", "wh", "lik", "liv"}
 
 
-def parse_usfm(text, report):
+def parse_usfm(text, report, tags=False):
     tokens = re.split(r"\\(\+?[A-Za-z][A-Za-z0-9-]*\*?|\*)", text)
     if tokens[0].strip():
         raise ConversionError("USFM must begin with a marker, normally \\id.")
@@ -427,6 +458,7 @@ def parse_usfm(text, report):
     pieces = []
     skipping = None
     stack = []
+    heading = False  # inside a heading paragraph, such as a psalm title with tagged words
 
     def flush():
         nonlocal verse, pieces
@@ -451,6 +483,7 @@ def parse_usfm(text, report):
         if marker in {"id", "c", "v"}:
             if stack:
                 raise ConversionError("USFM character markup crosses a chapter/verse boundary.")
+            heading = False
             flush()
             bits = content.strip().split(maxsplit=1)
             if not bits:
@@ -472,24 +505,42 @@ def parse_usfm(text, report):
             if marker == "ide" and content.strip().upper() not in {"UTF-8", "65001 - UNICODE (UTF-8)"}:
                 raise ConversionError("USFM declares an unsupported encoding; provide UTF-8.")
         elif HEADINGS.fullmatch(marker):
+            heading = verse is None
             if content.strip():
                 report.loss("usfm-headings", "USFM headings and introductory paragraphs are omitted from plain verse text.")
         elif PARAGRAPHS.fullmatch(marker):
+            heading = False
             if verse is not None:
                 pieces.extend([" ", content])
             elif content.strip():
                 report.loss("usfm-unreferenced", "USFM text outside a numbered verse is omitted.")
+        elif (bare in CHARS or bare == "w") and verse is None and heading:
+            if closing:
+                if not stack or stack.pop() != bare:
+                    raise ConversionError("USFM character markers are not balanced.")
+            else:
+                stack.append(bare)
+            if content.strip():
+                report.loss("usfm-headings", "USFM headings and introductory paragraphs are omitted from plain verse text.")
         elif bare in CHARS or bare == "w":
             if verse is None:
                 raise ConversionError("USFM character markup occurs outside a verse.")
             if closing:
                 if not stack or stack.pop() != bare:
                     raise ConversionError("USFM character markers are not balanced.")
+                if tags and bare in {"w", "add"}:
+                    pieces.append(TAG_CLOSE if bare == "w" else ADD_CLOSE)
                 pieces.append(content)
             else:
                 stack.append(bare)
+                numbers = []
                 if bare == "w" and "|" in content:
-                    content = content.split("|", 1)[0]
+                    content, attributes = content.split("|", 1)
+                    numbers = strongs_numbers(re.findall(r'strong="([^"]*)"', attributes))
+                if tags and bare == "w":
+                    content = tag_open(numbers) + content
+                elif tags and bare == "add":
+                    content = ADD_OPEN + content
                 pieces.append(content)
                 report.event("inline-formatting", "Inline formatting/word attributes are flattened; the contained words are retained.")
         else:
@@ -704,6 +755,99 @@ def sword_configuration(module, explicit_root=None):
     return root
 
 
+def word_spans(text):
+    """Word positions under tokenizer lamplighter-words-1 (lib/word-links.js): runs of letters, marks and
+    digits, with apostrophes inside them."""
+    inside = lambda ch: unicodedata.category(ch)[0] in "LMN"
+    spans, i, n = [], 0, len(text)
+    while i < n:
+        if not inside(text[i]):
+            i += 1
+            continue
+        j = i
+        while True:
+            while j < n and inside(text[j]):
+                j += 1
+            if j + 1 < n and text[j] in "'\u2019" and inside(text[j + 1]):
+                j += 1
+                continue
+            break
+        spans.append((i, j))
+        i = j
+    return spans
+
+
+def tagged_words(text):
+    """Words of a verse from a tag-collecting parse: [(word, "H853 H776" or None, supplied)]."""
+    plain, marks, numbers, added, i = [], [], [], 0, 0
+    while i < len(text):
+        ch = text[i]
+        if ch == TAG_OPEN:
+            j = text.index(TAG_MID, i)
+            numbers.append(text[i + 1:j])
+            i = j + 1
+            continue
+        if ch == TAG_CLOSE:
+            numbers.pop()
+        elif ch == ADD_OPEN:
+            added += 1
+        elif ch == ADD_CLOSE:
+            added -= 1
+        else:
+            plain.append(ch)
+            marks.append((numbers[-1] if numbers else None, added > 0))
+        i += 1
+    joined = "".join(plain)
+    return [(joined[a:b], *marks[a]) for a, b in word_spans(joined)]
+
+
+def same_word(word):
+    return word.casefold().replace("\u2019", "'")
+
+
+def build_links(source, target, report):
+    """Word links for the target edition from a source parsed with tags: a source word's numbers go to the
+    target word it matches in the same verse; words the source marks as supplied link with no number."""
+    words = {}
+    for book in source["books"]:
+        for chapter in book["chapters"]:
+            for verse in chapter["verses"]:
+                words[(book["osis"], chapter["chapter"], verse["verse"])] = tagged_words(verse["text"])
+    verses, linked, total = {}, 0, 0
+    # Keys count books in the target edition's own order, as every Lamplighter resource does
+    for index, book in enumerate(target.get("books", [])):
+        identity = next((book_id(book[f]) for f in ("osis", "abbrev", "name") if isinstance(book.get(f), str) and norm(book[f]) in ALIASES), None)
+        if identity is None:
+            report.event("unknown-target-book", "Target books with names the converter does not know were skipped.")
+            continue
+        for c, chapter in enumerate(book.get("chapters", []), 1):
+            for v, verse in enumerate(chapter.get("verses", []), 1):
+                text = verse.get("text", "") if isinstance(verse, dict) else ""
+                spans = word_spans(text)
+                total += len(spans)
+                found = words.get((identity["osis"], c, v))
+                if not found or not spans:
+                    continue
+                mine = [same_word(text[a:b]) for a, b in spans]
+                theirs = [same_word(w) for w, _, _ in found]
+                links = []
+                for block in difflib.SequenceMatcher(None, theirs, mine, autojunk=False).get_matching_blocks():
+                    for k in range(block.size):
+                        _, numbers, supplied = found[block.a + k]
+                        if numbers is not None:
+                            links.append([block.b + k, numbers])
+                        elif supplied:
+                            links.append([block.b + k, ""])
+                if links:
+                    links.sort()
+                    verses[f"{index}.{c}.{v}"] = links
+                    linked += len(links)
+    if not verses:
+        raise ConversionError("No source words matched the target edition; check that both are the same translation and numbering.")
+    report.event("linked-words", f"Words of the target edition that received a Strong's number or a supplied-word mark, of {total}.", linked)
+    return {"verses": verses}
+
+
 def convert(opts):
     report = Report(opts.allow_lossy)
     inputs = opts.inputs
@@ -730,7 +874,7 @@ def convert(opts):
     elif opts.source_format == "json":
         data = normalize_json(load_json(raw), report)
     elif opts.source_format == "osis":
-        data = parse_osis(raw, report)
+        data = parse_osis(raw, report, tags=bool(opts.links_for))
     elif opts.source_format in {"usfm", "usx"}:
         combined = []
         seen = set()
@@ -741,7 +885,7 @@ def convert(opts):
             if total_bytes > MAX_BYTES * 2:
                 raise ConversionError("Combined input files exceed 128 MiB.")
             hashes.append(hashlib.sha256(source).hexdigest())
-            converted = parse_usfm(decode(source), report) if opts.source_format == "usfm" else parse_usx(source, report)
+            converted = parse_usfm(decode(source), report, tags=bool(opts.links_for)) if opts.source_format == "usfm" else parse_usx(source, report)
             for book in converted["books"]:
                 if book["osis"] in seen:
                     raise ConversionError("A book appears in more than one input; combine its source explicitly first.")
@@ -759,10 +903,25 @@ def convert(opts):
         environment["SWORD_PATH"] = str(sword_configuration(module, opts.sword_path).resolve())
         raw = run_bounded([opts.mod2osis, module], environment)
         hashes.append(hashlib.sha256(raw).hexdigest())
-        data = parse_osis(raw, report)
+        data = parse_osis(raw, report, tags=bool(opts.links_for))
         report.event("sword-export", "An installed SWORD module was exported by CrossWire mod2osis; no proprietary/locked-module decoder is included.")
     else:
         raise ConversionError("Unsupported source format.")
+    if opts.links_for:
+        if opts.source_format not in {"usfm", "osis", "sword"} or opts.kind != "edition":
+            raise ConversionError("Word links come from Strong's-tagged USFM, OSIS or SWORD Bible text.")
+        target_bytes = read_bytes(opts.links_for)
+        target = load_json(target_bytes)
+        if any(MARKERS.search(verse.get("text", "")) for book in target.get("books", []) for chapter in book.get("chapters", []) for verse in chapter.get("verses", []) if isinstance(verse, dict)):
+            raise ConversionError("Target edition text contains private-use characters this converter reserves.")
+        data = build_links(data, target, report)
+        data = {"type": "word-links", "formatVersion": 1, "edition": opts.abbreviation or target.get("abbreviation", ""), "editionSha256": hashlib.sha256(target_bytes).hexdigest(), "tokenizer": "lamplighter-words-1", **data}
+        for option, field in [("name", "name"), ("license", "license"), ("license_url", "license_url"), ("attribution", "attribution"), ("versification", "versification")]:
+            if getattr(opts, option) is not None:
+                data[field] = getattr(opts, option)
+        data["source"] = {"format": opts.source_format, **({"sha256": hashes[0]} if len(hashes) == 1 else {})}
+        summary = {"sourceFormat": opts.source_format, "kind": "word-links", "inputSha256": hashes, "diagnostics": list(report.events.values()), "verses": len(data["verses"])}
+        return data, summary
     if opts.kind == "commentary" and opts.source_format not in {"text", "vpl", "docx", "doc"}:
         raise ConversionError("Commentary conversion supports referenced text/Word paragraphs; other formats currently support Bible editions only.")
     for option, field in [("name", "name"), ("abbreviation", "abbreviation"), ("language", "language"), ("language_name", "languageEnglishName"), ("license", "license"), ("license_url", "license_url"), ("attribution", "attribution"), ("versification", "versification")]:
@@ -793,6 +952,7 @@ def parser():
     p.add_argument("--kind", choices=["edition", "commentary"], default="edition")
     for option in ["name", "abbreviation", "language", "language-name", "license", "license-url", "attribution", "versification", "reference-edition", "layout", "sword-path"]:
         p.add_argument("--" + option)
+    p.add_argument("--links-for", metavar="EDITION", help="Write word links for this Lamplighter edition from a Strong's-tagged source instead of an edition")
     p.add_argument("--antiword", default="antiword", help="Path to trusted antiword executable for legacy DOC")
     p.add_argument("--mod2osis", default="mod2osis", help="Path to trusted CrossWire mod2osis executable")
     p.add_argument("--rtl", action="store_true")
@@ -808,7 +968,7 @@ def main(argv=None):
             raise ConversionError("Multiple inputs are supported only for USFM/USX book files.")
         output = Path(opts.out).resolve()
         sources = [Path(p).resolve() for p in opts.inputs] if opts.source_format != "sword" else []
-        sources += [Path(p).resolve() for p in [opts.layout, opts.reference_edition] if p]
+        sources += [Path(p).resolve() for p in [opts.layout, opts.reference_edition, opts.links_for] if p]
         if output in sources:
             raise ConversionError("Output must differ from every source, layout, and reference file.")
         if opts.report and Path(opts.report).resolve() == output:

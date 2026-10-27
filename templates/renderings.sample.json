@@ -1,0 +1,18 @@
+{
+  "type": "renderings",
+  "formatVersion": 1,
+  "language": "en",
+  "name": "Sample renderings",
+  "license": "CC0",
+  "renderings": {
+    "H1697": {
+      "word": 3,
+      "words": 2,
+      "matter": 1
+    },
+    "H1961": {
+      "was": 4,
+      "became": 1
+    }
+  }
+}
