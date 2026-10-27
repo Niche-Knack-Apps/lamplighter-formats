@@ -37,32 +37,43 @@ def main():
 
 
 def check_pack():
-    """The pack manifest and its parts; a part's entries are exactly a commentary's entries."""
+    """A pack's metadata, index and parts. The metadata takes a commentary's own fields, and a
+    part's entries are exactly a commentary's entries."""
     load = lambda name: json.loads((ROOT / "schemas" / f"{name}.schema.json").read_text())
-    commentary, pack, part = load("commentary"), load("commentary-pack"), load("commentary-part")
+    commentary, metadata, index, part = (load(n) for n in ("commentary", "commentary-pack", "commentary-index", "commentary-part"))
     assert part["properties"]["entries"] == commentary["properties"]["entries"], "part entries drifted from commentary entries"
-    point = commentary["properties"]["entries"]["items"]["properties"]["range"]["properties"]["start"]
-    assert all(pack["properties"]["parts"]["items"]["properties"]["range"]["properties"][k] == point for k in ("start", "end"))
-    for schema in (pack, part):
+    for key, value in commentary["properties"].items():
+        if key not in ("entries", "type", "formatVersion"):
+            assert metadata["properties"][key] == value, f"metadata field {key} drifted from commentary"
+    for schema in (metadata, index, part):
         Draft7Validator.check_schema(schema)
     folder = ROOT / "templates" / "commentary-pack.sample"
-    manifest = json.loads((folder / "pack.json").read_text())
-    Draft7Validator(pack).validate(manifest)
-    for listed in manifest["parts"]:
-        Draft7Validator(part).validate(json.loads((folder / listed["file"]).read_text()))
+    read = lambda name: json.loads((folder / name).read_text())
+    meta, idx = read("_metadata.json"), read("_index.json")
+    Draft7Validator(metadata).validate(meta)
+    Draft7Validator(index).validate(idx)
+    for listed in idx["parts"]:
+        Draft7Validator(part).validate(read(listed["file"]))
     for change in (lambda m: m.update(formatVersion=2), lambda m: m.update(type="commentary"),
-                   lambda m: m["parts"][0].update(file="../escape.json"), lambda m: m["parts"][0].update(file="pack.json"),
-                   lambda m: m["parts"][0]["range"].pop("end"), lambda m: m["parts"][0].update(sha256="ABC")):
-        invalid = copy.deepcopy(manifest)
+                   lambda m: m.pop("entryCount"), lambda m: m.update(entries=[])):
+        invalid = copy.deepcopy(meta)
         change(invalid)
-        assert not Draft7Validator(pack).is_valid(invalid), invalid
-    sample = json.loads((folder / manifest["parts"][0]["file"]).read_text())
+        assert not Draft7Validator(metadata).is_valid(invalid), invalid
+    for change in (lambda i: i.update(type="commentary-pack"), lambda i: i["parts"][0].update(file="../escape.json"),
+                   lambda i: i["parts"][0].update(file="_index.json"), lambda i: i["parts"][0].update(sha256="ABC"),
+                   lambda i: i["books"].update({"x": {"chapters": {}}}), lambda i: i["books"]["42"]["chapters"].update({"0": [1]}),
+                   lambda i: i["books"]["42"]["chapters"].update({"2": [[1, 0]]}), lambda i: i["books"]["42"]["chapters"].update({"2": [[1, 2, 3, 4]]}),
+                   lambda i: i["books"]["42"]["chapters"].update({"2": []})):
+        invalid = copy.deepcopy(idx)
+        change(invalid)
+        assert not Draft7Validator(index).is_valid(invalid), invalid
+    sample = read(idx["parts"][0]["file"])
     for change in (lambda d: d.pop("formatVersion"), lambda d: d.update(entries=[]),
                    lambda d: d["entries"][0]["range"].update(start={"book_index": 0, "verse": 1})):
         invalid = copy.deepcopy(sample)
         change(invalid)
         assert not Draft7Validator(part).is_valid(invalid), invalid
-    return 2
+    return 3
 
 
 if __name__ == "__main__":
