@@ -2,7 +2,8 @@
 """Bounded, explicit conversions into Lamplighter's existing JSON format.
 
 Only the standard library is needed. Legacy DOC and installed SWORD modules use
-antiword and mod2osis, respectively; neither tool is downloaded or run by a shell.
+antiword and CrossWire's diatheke (or mod2osis), respectively; neither tool is downloaded or
+run by a shell.
 """
 import argparse
 import configparser
@@ -36,15 +37,32 @@ def norm(value):
 
 
 ALIASES = {norm(b[k]): b for b in BOOKS for k in ("name", "abbrev", "osis", "usfm")}
-for alias, name in {"Psalm": "Psalms", "Song of Songs": "Song of Solomon", "Canticles": "Song of Solomon", "Ecclesiasticus": "Sirach", "Wisdom": "Wisdom of Solomon", "AddPs": "Psalm 151", "Ps151": "Psalm 151"}.items():
+# Includes the English names SWORD prints ("Revelation of John", "I Samuel" via ROMAN below).
+for alias, name in {"Psalm": "Psalms", "Song of Songs": "Song of Solomon", "Canticles": "Song of Solomon", "Ecclesiasticus": "Sirach", "Wisdom": "Wisdom of Solomon", "AddPs": "Psalm 151", "Ps151": "Psalm 151",
+                    "Revelation of John": "Revelation", "Prayer of Manasses": "Prayer of Manasseh", "Epistle of Jeremiah": "Letter of Jeremiah", "Esther (Greek)": "Greek Esther", "Additional Psalm": "Psalm 151"}.items():
     ALIASES[norm(alias)] = ALIASES[norm(name)]
+ROMAN = {"I": "1", "II": "2", "III": "3", "IV": "4"}
+# Books with no place among Lamplighter's 85 (OSIS IDs and SWORD's English names). They are omitted
+# with consent instead of failing a whole Bible; any other unknown book still fails.
+UNPLACED = {norm(name) for name in ["PssSol", "Psalms of Solomon", "EpLao", "Laodiceans", "Epistle to the Laodiceans", "Odes",
+                                     "1En", "I Enoch", "1 Enoch", "Jub", "Jubilees", "AddEsth", "Additions to Esther", "AddDan", "Additions to Daniel"]}
 
 
 def book_id(value):
+    text = re.sub(r"^(IV|I{1,3})(?=\s)", lambda m: ROMAN[m.group(1)], str(value).strip())
     try:
-        return ALIASES[norm(value)]
+        return ALIASES[norm(text)]
     except KeyError:
         raise ConversionError(f"Unknown book {value!r}; use a supported English name, OSIS ID, or USFM code.") from None
+
+
+def placed(book, report):
+    """The book's identity, or None (reported as a loss) for a known book Lamplighter has no place for."""
+    if norm(book) in UNPLACED:
+        report.loss("unplaced-books", "Books outside Lamplighter's 85 (such as Psalms of Solomon, 1 Enoch, Laodiceans, or Esther/Daniel additions printed apart from the Greek books) are omitted.")
+        report.event(f"unplaced-book:{book}", f"Omitted book: {book}.")
+        return None
+    return book_id(book)
 
 
 def number(value, label):
@@ -341,6 +359,24 @@ def flatten(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
+# OSIS elements whose words are verse text; block-level ones also separate words.
+OSIS_TEXT = {"osis", "osisText", "div", "chapter", "p", "lg", "l", "w", "hi", "q", "seg", "transChange", "lb", "milestone",
+             "divineName", "foreign", "name", "abbr", "mentioned", "date", "catchWord", "inscription", "salute", "signed", "closer",
+             "list", "item", "ab", "table", "row", "cell"}
+OSIS_BREAKS = {"p", "l", "lb", "list", "item", "ab", "row", "cell", "closer", "salute", "signed"}
+OSIS_INLINE = {"w", "hi", "q", "seg", "transChange", "divineName", "foreign", "name", "abbr", "mentioned", "date", "catchWord", "inscription"}
+
+
+def osis_text(element):
+    """Words of an element, leaving out notes."""
+    parts = [element.text or ""]
+    for child in element:
+        if tag(child) != "note":
+            parts.append(osis_text(child))
+        parts.append(child.tail or "")
+    return "".join(parts)
+
+
 def parse_osis(data, report):
     root = xml_root(data)
     if tag(root) != "osis":
@@ -348,6 +384,7 @@ def parse_osis(data, report):
     edition = Edition(report)
     active = None
     pieces = []
+    title = ""
 
     def finish(expected=None):
         nonlocal active, pieces
@@ -356,15 +393,28 @@ def parse_osis(data, report):
         if expected is not None and expected != active[0]:
             raise ConversionError("OSIS verse milestone IDs do not match.")
         _, b, c, v = active
-        edition.add(b, c, v, flatten("".join(pieces)))
+        if placed(b, report):
+            edition.add(b, c, v, flatten("".join(pieces)))
         active, pieces = None, []
 
     def walk(element):
-        nonlocal active
+        nonlocal active, title
         name = tag(element)
-        if name in {"header", "note", "title", "figure", "reference"}:
+        if name == "title" and (element.get("canonical") == "true" or element.get("type") == "psalm"):
+            # A psalm's superscription is scripture: it opens verse 1, as in the bundled editions.
+            text = flatten(osis_text(element))
+            if text:
+                report.event("osis-canonical-titles", "Canonical titles (psalm superscriptions) open their first verse.")
+                if active is not None:
+                    pieces.append(f" {text} ")
+                else:
+                    title = text
+            return
+        if name in {"header", "note", "title", "figure", "reference", "speaker"}:
             if name != "header" and (name == "figure" or any(t.strip() for t in element.itertext())):
-                report.loss("osis-annotations", "OSIS headings, notes, figures, or reference annotations are omitted from plain verse text.")
+                report.loss("osis-annotations", "OSIS headings, notes, speaker labels, figures, or reference annotations are omitted from plain verse text.")
+            return
+        if name == "index":
             return
         if name == "verse":
             if element.get("eID"):
@@ -377,11 +427,19 @@ def parse_osis(data, report):
             if not match:
                 raise ConversionError("OSIS verse IDs must identify one whole verse; combined IDs/subverses need manual review.")
             active = (element.get("sID") or ref, *match.groups())
-        elif name not in {"osis", "osisText", "div", "chapter", "p", "lg", "l", "w", "hi", "q", "seg", "transChange", "lb", "milestone"}:
+            if title:
+                pieces.append(f"{title} ")
+                title = ""
+        elif name not in OSIS_TEXT:
             raise ConversionError(f"Unsupported OSIS element: {name}.")
         if name == "q" and (element.get("sID") or element.get("eID")):
-            raise ConversionError("OSIS quotation milestones need manual review or an export with literal punctuation.")
-        if active is not None and name in {"w", "hi", "q", "seg", "transChange"}:
+            # Quotation milestones: a stated marker is literal punctuation; none means implicit marks.
+            if "marker" not in element.attrib:
+                report.loss("osis-implicit-punctuation", "OSIS implicit quotation marks are not reconstructed; use an export with literal punctuation.")
+            elif active is not None and element.get("marker"):
+                pieces.append(element.get("marker"))
+            return
+        if active is not None and name in OSIS_INLINE:
             if name == "q":
                 if "marker" not in element.attrib:
                     report.loss("osis-implicit-punctuation", "OSIS implicit quotation marks are not reconstructed; use an export with literal punctuation.")
@@ -390,7 +448,7 @@ def parse_osis(data, report):
             report.event("inline-formatting", "Inline formatting/word attributes are flattened; the contained words are retained.")
         if name == "milestone" and element.get("marker"):
             report.loss("osis-milestone-markers", "OSIS typographic milestone markers are omitted from plain verse text.")
-        if active is not None and name in {"p", "l", "lb"}:
+        if active is not None and name in OSIS_BREAKS:
             pieces.append(" ")
         if active is not None and element.text:
             pieces.append(element.text)
@@ -410,6 +468,129 @@ def parse_osis(data, report):
     walk(root)
     if active is not None:
         raise ConversionError("OSIS contains an unclosed verse milestone.")
+    return edition.finish()
+
+
+# diatheke renders a whole module through SWORD's own filters, whatever its markup (OSIS, GBF,
+# ThML). "Rev 999:999" runs on past Revelation into books some versifications place after it.
+DIATHEKE_RANGE = "Gen 1:1-Rev 999:999"
+DIATHEKE_REFERENCE = re.compile(r"^\s*(.+?) ([0-9]+):([0-9]+):(?: (.*))?$")
+
+
+def plain_text(text, report):
+    """SWORD's plain filters mark italics as *text*; a few modules also leak markup they could
+    not render. Both are flattened like inline formatting elsewhere."""
+    cleaned = re.sub(r"<title\b[^>]*>.*?</title>", " ", text)
+    cleaned = re.sub(r"</?[A-Za-z][^<>]*>", "", cleaned)
+    if cleaned != text or "*" in cleaned:
+        report.event("inline-formatting", "Inline formatting/word attributes are flattened; the contained words are retained.")
+    cleaned = flatten(cleaned.replace("*", ""))
+    return re.sub(r"\s+([,.;:!?\u00bb\u201d\u2019)])", r"\1", cleaned)
+
+
+def letters(text):
+    return re.sub(r"[\W_]+", "", text).casefold()
+
+
+def diatheke_prefixes(raw, names):
+    """The pre-verse markup diatheke prints before each reference in -f internal output, keyed
+    by reference. Each record is one line: "<pre-verse markup>Book c:v: <raw entry>"."""
+    pattern = re.compile(r"^(.*?)(?<![^\s>])(" + "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True)) + r") ([0-9]+):([0-9]+): ")
+    prefixes = {}
+    for line in raw.splitlines():
+        match = pattern.match(line)
+        if match:
+            prefixes.setdefault(match.group(2, 3, 4), match.group(1))
+    return prefixes
+
+
+def sword_text(data, report):
+    """diatheke's plain output. A UTF-8 module with a few damaged byte sequences keeps the rest of
+    its text; each damaged sequence becomes U+FFFD, with consent."""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        text = data.decode("utf-8", "replace")
+        report.loss("invalid-utf8", "Damaged UTF-8 byte sequences in the module were replaced with U+FFFD.")
+        report.event("invalid-utf8-count", "Damaged UTF-8 byte sequences replaced.", text.count("\ufffd"))
+        return text
+
+
+def parse_diatheke(text, raw, module, report):
+    """Verses from diatheke's plain rendering of a range, using its raw (-f internal) rendering of
+    the same range to find headings.
+
+    Plain output prints each verse as "Book c:v: text"; the text may continue on following lines.
+    Before each reference diatheke 1.9 prints the latest pre-verse heading, so one heading repeats
+    before every later verse until another replaces it (KJV's last psalm title would precede the
+    whole New Testament). The raw output shows exactly that pre-verse markup on the reference's
+    own line, so the rendered heading lines are known rather than guessed: they are dropped, except
+    that a new canonical title on a psalm's first verse opens that verse, as in the bundled editions.
+    """
+    refs, segments, books = [], [[]], {}
+    for line in text.splitlines():
+        if line.strip() == f"({module})":
+            continue
+        match = DIATHEKE_REFERENCE.match(line)
+        name, head = None, ""
+        if match:
+            name = re.sub(r"<[^>]*>", "", match.group(1)).strip()
+            if re.search(r"\s{2,}", name):
+                # A heading rendered on the reference line: "Aleph   Psalms 119:1: ...".
+                *heads, name = re.split(r"\s{2,}", name)
+                head = " ".join(heads)
+        if match and name not in books:
+            try:
+                books[name] = book_id(name)
+            except ConversionError:
+                books[name] = "unplaced" if norm(name) in UNPLACED else None
+        if match and books[name]:
+            if head:
+                segments[-1].append(head)
+            refs.append([name, match.group(2), match.group(3), [match.group(4) or ""], ""])
+            segments.append([])
+        else:
+            segments[-1].append(line)
+    prefixes = diatheke_prefixes(raw, [n for n, b in books.items() if b]) if refs else {}
+    previous = ""
+    for i, ref in enumerate(refs):
+        lines = segments[i]
+        prefix = prefixes.get(tuple(ref[:3]), "")
+        heading = letters(re.sub(r"<[^>]*>", "", re.sub(r"<note\b.*?</note>", "", prefix, flags=re.S)))
+        block = 0
+        if heading:
+            # The rendered heading is the shortest run of trailing lines with the same letters.
+            for size in range(1, len(lines) + 1):
+                if letters(plain_text(" ".join(lines[-size:]), report)) == heading:
+                    block = size
+                    break
+            else:
+                raise ConversionError(f"diatheke heading before {ref[0]} {ref[1]}:{ref[2]} could not be matched in its plain output.")
+            if prefix != previous:
+                psalm_title = re.search(r'<title\b[^>]*(canonical="true"|type="psalm")', prefix)
+                if psalm_title and books[ref[0]] != "unplaced" and books[ref[0]]["osis"] == "Ps" and ref[2] == "1":
+                    ref[4] = " ".join(lines[len(lines) - block:])
+                    report.event("sword-canonical-titles", "Psalm superscriptions open their first verse.")
+                else:
+                    report.loss("sword-headings", "Section headings are omitted from plain verse text.")
+        previous = prefix
+        if i:
+            refs[i - 1][3] += lines[:len(lines) - block]
+    if refs:
+        refs[-1][3] += segments[-1]
+    edition = Edition(report)
+    for name, chapter, verse, parts, title in refs:
+        body = plain_text(" ".join(parts), report)
+        if chapter == "0" or verse == "0":
+            if body:
+                report.loss("sword-introductions", "Book and chapter introductions are omitted.")
+            continue
+        if books[name] == "unplaced":
+            if body:
+                placed(name, report)
+            continue
+        if body:
+            edition.add(books[name]["osis"], chapter, verse, plain_text(f"{title} {body}", report) if title else body)
     return edition.finish()
 
 
@@ -687,11 +868,17 @@ def sword_configuration(module, explicit_root=None):
         if len(files) > 4096:
             raise ConversionError("SWORD configuration directory exceeds its file limit.")
         for file in files:
+            # SWORD continues long values with a trailing backslash and older confs are not
+            # always UTF-8; they are metadata only, so read them leniently. A conf for another
+            # module that still cannot be parsed must not block this one.
+            text = re.sub(r"\\\r?\n", " ", read_bytes(file).decode("utf-8", "replace"))
             config = configparser.ConfigParser(interpolation=None, strict=False)
             try:
-                config.read_string(decode(read_bytes(file)))
+                config.read_string(text)
             except configparser.Error:
-                raise ConversionError("Malformed SWORD module configuration.") from None
+                if re.search(rf"^\[{re.escape(module)}\]", text, re.M):
+                    raise ConversionError("Malformed SWORD module configuration.") from None
+                continue
             if module in config:
                 matches.append((root, config[module]))
     if len(matches) != 1:
@@ -753,14 +940,26 @@ def convert(opts):
         data = {"books": combined}
     elif opts.source_format == "sword":
         module = inputs[0]
-        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,127}", module):
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", module):
             raise ConversionError("SWORD input must be an installed module identifier, not an archive or command option.")
         environment = os.environ.copy()
         environment["SWORD_PATH"] = str(sword_configuration(module, opts.sword_path).resolve())
-        raw = run_bounded([opts.mod2osis, module], environment)
-        hashes.append(hashlib.sha256(raw).hexdigest())
-        data = parse_osis(raw, report)
-        report.event("sword-export", "An installed SWORD module was exported by CrossWire mod2osis; no proprietary/locked-module decoder is included.")
+        if opts.sword_renderer == "mod2osis":
+            raw = run_bounded([opts.mod2osis, module], environment)
+            hashes.append(hashlib.sha256(raw).hexdigest())
+            data = parse_osis(raw, report)
+            report.event("sword-export", "An installed SWORD module was exported by CrossWire mod2osis; no proprietary/locked-module decoder is included.")
+        else:
+            raw = run_bounded([opts.diatheke, "-b", module, "-l", "en", "-f", "plain", "-k", DIATHEKE_RANGE], environment)
+            internal = run_bounded([opts.diatheke, "-b", module, "-l", "en", "-f", "internal", "-k", DIATHEKE_RANGE], environment)
+            hashes += [hashlib.sha256(raw).hexdigest(), hashlib.sha256(internal).hexdigest()]
+            # Raw entries come out in the module's own encoding; older modules are Latin-1.
+            try:
+                internal_text = internal.decode("utf-8")
+            except UnicodeDecodeError:
+                internal_text = internal.decode("latin-1")
+            data = parse_diatheke(sword_text(raw, report), internal_text, module, report)
+            report.event("sword-export", "An installed SWORD module was rendered by CrossWire diatheke; no proprietary/locked-module decoder is included.")
     else:
         raise ConversionError("Unsupported source format.")
     if opts.kind == "commentary" and opts.source_format not in {"text", "vpl", "docx", "doc"}:
@@ -794,6 +993,8 @@ def parser():
     for option in ["name", "abbreviation", "language", "language-name", "license", "license-url", "attribution", "versification", "reference-edition", "layout", "sword-path"]:
         p.add_argument("--" + option)
     p.add_argument("--antiword", default="antiword", help="Path to trusted antiword executable for legacy DOC")
+    p.add_argument("--sword-renderer", choices=["diatheke", "mod2osis"], default="diatheke", help="SWORD export tool: diatheke renders every module markup; mod2osis passes GBF/ThML through")
+    p.add_argument("--diatheke", default="diatheke", help="Path to trusted CrossWire diatheke executable")
     p.add_argument("--mod2osis", default="mod2osis", help="Path to trusted CrossWire mod2osis executable")
     p.add_argument("--rtl", action="store_true")
     p.add_argument("--allow-lossy", action="store_true")
