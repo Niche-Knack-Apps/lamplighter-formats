@@ -148,13 +148,21 @@ node bin/lamplighter-formats.js convert bible.osis.xml --from osis \
   --name "My Translation" --out translation.json
 ```
 
-OSIS headings/notes/figures/reference annotations require `--allow-lossy` to omit. Combined
-or subverse OSIS IDs and unsupported elements fail for review. OSIS implicit quotation
-mark generation and elaborate milestone/typographic semantics are not reconstructed;
-prefer an export with literal punctuation when exact punctuation matters.
+OSIS headings, notes, speaker labels, figures and reference annotations require
+`--allow-lossy` to omit. Words inside standard text elements (`divineName`, `foreign`, `name`,
+`list`/`item`, `table`, `closer`, `signed` and similar) are kept. A canonical title
+(`<title canonical="true">` or `type="psalm"`) is a psalm's superscription: it opens verse 1, as
+in the bundled editions. Quotation milestones (`<q sID/>`, `<q eID/>`) keep a stated `marker`;
+without one, implicit quotation marks need `--allow-lossy`. Combined or subverse OSIS IDs and
+unsupported elements fail for review. Elaborate milestone/typographic semantics are not
+reconstructed; prefer an export with literal punctuation when exact punctuation matters.
 
-SWORD binary modules use CrossWire's own engine via `mod2osis`, installed separately
-(often packaged as `libsword-utils` on Linux). Pass an installed module ID, not a ZIP:
+Books with no place among Lamplighter's 85 (Psalms of Solomon, Odes, 1 Enoch, Jubilees,
+Laodiceans, and Esther or Daniel additions printed apart from the Greek books) are omitted with
+`--allow-lossy` and named in the report; any other unknown book still fails.
+
+SWORD binary modules use CrossWire's own engine, installed separately (often packaged as
+`diatheke` and `libsword-utils` on Linux). Pass an installed module ID, not a ZIP:
 
 ```sh
 node bin/lamplighter-formats.js convert MyBible --from sword \
@@ -163,10 +171,19 @@ node bin/lamplighter-formats.js convert MyBible --from sword \
 ```
 
 The root contains `mods.d/*.conf` and `modules/`. If `--sword-path` is omitted, standard
-SWORD installation roots are checked. `--mod2osis /path/to/mod2osis` selects an explicit
-trusted executable. Supported module drivers are RawText/RawText4/zText/zText4. Ambiguous,
-locked/encrypted, or non-Bible modules fail; this tool does not bypass module protection.
-An alternative is `mod2osis MyBible > my-bible.osis.xml`, then `--from osis`.
+SWORD installation roots are checked. Supported module drivers are
+RawText/RawText4/zText/zText4. Ambiguous, locked/encrypted, or non-Bible modules fail; this
+tool does not bypass module protection.
+
+By default `diatheke` renders the module through SWORD's own filters, so OSIS, GBF and ThML
+modules all convert; italics are flattened like other inline formatting. diatheke 1.9 prints
+the latest pre-verse heading before every later verse of a range, so the converter also reads
+diatheke's raw output to find each verse's own heading: a psalm's title opens its verse 1 and
+other headings are omitted (with `--allow-lossy`). `--diatheke /path/to/diatheke` selects an
+explicit trusted executable. `--sword-renderer mod2osis` uses CrossWire's `mod2osis` instead
+(`--mod2osis` selects its path); it copies GBF and ThML markup into its output unchanged, so
+such modules may not be well-formed OSIS. An alternative is `mod2osis MyBible >
+my-bible.osis.xml`, then `--from osis`.
 
 SWORD and e-Sword are different formats. e-Sword/MySword databases and arbitrary binary
 archives are not supported by this converter.

@@ -58,7 +58,7 @@ node bin/lamplighter-formats.js convert translation.docx --from docx \
 `npm link` puts `lamplighter-formats` on your PATH if you prefer.
 
 The converter uses Python's standard library. Legacy `.doc` extraction additionally
-requires `antiword`; installed SWORD modules require CrossWire's `mod2osis` utility.
+requires `antiword`; installed SWORD modules require CrossWire's `diatheke` (or `mod2osis`).
 These dependencies are optional and are never downloaded automatically. See
 [conversion examples and supported subsets](CONVERTING.md) before converting rich markup.
 

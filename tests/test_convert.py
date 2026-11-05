@@ -217,9 +217,109 @@ class ConversionTests(unittest.TestCase):
                 c.sword_configuration('Sample', str(root))
             config.write_text('[Sample]\nModDrv=RawText\n')
             self.assertEqual(c.sword_configuration('Sample', str(root)), root)
-            (root / 'mods.d/duplicate.conf').write_text(config.read_text())
+            # Backslash continuations (as CrossWire writes long values) and an unrelated broken conf.
+            config.write_text('[Sample]\nModDrv=RawText\nAbout=First line \\\n  second line\nCopyright=Caf\xe9 \\par \\\n  1999\n', encoding='latin-1')
+            (root / 'mods.d/other.conf').write_text('[Other]\nthis line has no equals sign\n')
+            self.assertEqual(c.sword_configuration('Sample', str(root)), root)
+            (root / 'mods.d/duplicate.conf').write_text(config.read_text(encoding='latin-1'))
             with self.assertRaisesRegex(c.ConversionError, 'exactly one'):
                 c.sword_configuration('Sample', str(root))
+
+    def test_sword_book_names_roman_numerals_and_unplaced_books(self):
+        self.assertEqual([c.book_id(n)["osis"] for n in ["I Samuel", "III John", "IV Maccabees", "Revelation of John", "Prayer of Manasses", "Esther (Greek)", "Additional Psalm"]],
+                         ["1Sam", "3John", "4Macc", "Rev", "PrMan", "EsthGr", "AddPs"])
+        with self.assertRaisesRegex(c.ConversionError, "Unknown book"):
+            c.book_id("Isaiahh")
+        xml = b'<osis><verse osisID="PssSol.1.1">A</verse><verse osisID="Gen.1.1">B</verse></osis>'
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.parse_osis(xml, c.Report())
+        report = c.Report(True)
+        self.assertEqual([b["osis"] for b in c.parse_osis(xml, report)["books"]], ["Gen"])
+        self.assertIn("unplaced-book:PssSol", report.events)
+        with self.assertRaisesRegex(c.ConversionError, "Unknown book"):
+            c.parse_osis(b'<osis><verse osisID="Xyz.1.1">A</verse></osis>', c.Report(True))
+
+    def test_osis_keeps_standard_text_elements_and_psalm_titles(self):
+        xml = (b'<osis><verse osisID="Gen.2.4">the <divineName>LORD</divineName> God, <foreign>Elohim</foreign><index index="x" level1="y"/></verse>'
+               b'<title type="psalm" canonical="true">A Psalm of David<note>n</note>.</title>'
+               b'<verse sID="Ps.3.1" osisID="Ps.3.1"/><q sID="q1" marker="\xe2\x80\x9c"/>LORD, how many!<q eID="q1" marker="\xe2\x80\x9d"/><verse eID="Ps.3.1"/>'
+               b'<verse osisID="Ps.4.1"><title canonical="true">To the chief Musician.</title>Hear me.</verse></osis>')
+        books = c.parse_osis(xml, c.Report())["books"]
+        self.assertEqual(books[0]["chapters"][1]["verses"][3]["text"], "the LORD God, Elohim")
+        self.assertEqual([ch["verses"][0]["text"] for ch in books[1]["chapters"][2:]], ["A Psalm of David. \u201cLORD, how many!\u201d", "To the chief Musician. Hear me."])
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.parse_osis(b'<osis><verse osisID="Gen.1.1"><speaker>Jesus</speaker>A</verse></osis>', c.Report())
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.parse_osis(b'<osis><verse osisID="Gen.1.1"><q sID="q1"/>A<q eID="q1"/></verse></osis>', c.Report())
+
+    def verses(self, text, raw="", report=None):
+        data = c.parse_diatheke(text, raw, "KJV", report or c.Report(True))
+        return {f'{b["osis"]} {ch["chapter"]}:{v["verse"]}': v["text"] for b in data["books"] for ch in b["chapters"] for v in ch["verses"] if v["text"]}
+
+    def test_diatheke_drops_stale_headings_and_keeps_psalm_titles(self):
+        # diatheke 1.9 prints the latest pre-verse heading before every later verse of a range;
+        # its raw output shows that heading on the reference's own line.
+        title = '<title canonical="true" type="psalm">A Psalm of David.</title>'
+        plain = ("Psalms 2:12: Kiss the Son.\nA Psalm of David.\nPsalms 3:1: LORD, how are they increased!\n"
+                 "A Psalm of David.\nPsalms 3:2: Many there be.\nA Psalm of David.\nJohn 3:16: For God so loved the world.\n(KJV)\n")
+        raw = f"Psalms 2:12: Kiss the Son.\n{title}Psalms 3:1: LORD!\n{title}Psalms 3:2: Many.\n{title}John 3:16: For God.\n(KJV)\n"
+        self.assertEqual(self.verses(plain, raw), {"Ps 2:12": "Kiss the Son.", "Ps 3:1": "A Psalm of David. LORD, how are they increased!",
+                                                   "Ps 3:2": "Many there be.", "John 3:16": "For God so loved the world."})
+        # A psalm whose title matches the previous psalm's keeps it (the raw markup around it differs).
+        plain = "A Psalm of David.\nPsalms 13:6: I will sing.\nA Psalm of David.\nPsalms 14:1: The fool hath said.\n"
+        raw = f'{title}<l sID="a"/>Psalms 13:6: I will sing.\n{title}<l sID="b"/>Psalms 14:1: The fool.\n'
+        self.assertEqual(self.verses(plain, raw)["Ps 14:1"], "A Psalm of David. The fool hath said.")
+        heading = '<title type="section">The Fall</title>'
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.parse_diatheke("Genesis 2:25: A.\nThe Fall\nGenesis 3:1: B.\n", f"Genesis 2:25: A.\n{heading}Genesis 3:1: B.\n", "KJV", c.Report())
+
+    def test_diatheke_keeps_refrains_poetry_and_text_on_the_next_line(self):
+        verses = self.verses("Psalms 136:1: O give thanks unto the LORD;\nfor his mercy endureth for ever.\nPsalms 136:2: O give thanks unto the God of gods:\n"
+                             "for his mercy endureth for ever.\nPsalms 136:3: O give thanks to the Lord of lords:\nfor his mercy endureth for ever.\n"
+                             "Psalms 137:1: By the rivers of Babylon.\nJohn 3:16: \nFor God so loved the world.\n")
+        self.assertEqual(verses["Ps 136:2"], "O give thanks unto the God of gods: for his mercy endureth for ever.")
+        self.assertEqual(verses["Ps 136:3"], "O give thanks to the Lord of lords: for his mercy endureth for ever.")
+        self.assertEqual(verses["John 3:16"], "For God so loved the world.")
+
+    def test_diatheke_heading_on_the_reference_line_and_empty_verses(self):
+        plain = "Psalms 33:22: Let thy mercy.\nA Aleph   Psalms 34:1: I will bless.\nA Aleph   Psalms 34:2: My soul.\nActs 8:36: See, here is water.\nActs 8:37: \nActs 8:38: And he commanded.\n"
+        raw = 'Psalms 33:22: Let.\n<title type="acrostic">A Aleph</title> Psalms 34:1: I.\n<title type="acrostic">A Aleph</title> Psalms 34:2: My.\nActs 8:36: See.\nActs 8:37: \nActs 8:38: And.\n'
+        verses = self.verses(plain, raw)
+        self.assertEqual([verses["Ps 34:1"], verses["Ps 34:2"], verses["Acts 8:36"]], ["I will bless.", "My soul.", "See, here is water."])
+        self.assertNotIn("Acts 8:37", verses)
+
+    def test_diatheke_flattens_italics_and_leaked_markup_and_needs_consent_for_unplaced_books(self):
+        verses = self.verses('Psalms 3:1: *LORD*, how <title type="x">Head</title>many <w>are</w> they !\nPsalms of Solomon 1:1: I cried.\nI Esdras 1:1: And Josias.\n')
+        self.assertEqual(verses, {"Ps 3:1": "LORD, how many are they!", "1Esd 1:1": "And Josias."})
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.parse_diatheke("Psalms of Solomon 1:1: I cried.\nGenesis 1:1: A.\n", "", "KJV", c.Report())
+
+    def test_sword_text_keeps_a_module_with_damaged_utf8(self):
+        data = "Revelation of John 22:21: The grace.\n".encode() + b"\x88 Amen.\n"
+        with self.assertRaisesRegex(c.ConversionError, "allow-lossy"):
+            c.sword_text(data, c.Report())
+        report = c.Report(True)
+        self.assertEqual(c.sword_text(data, report), "Revelation of John 22:21: The grace.\n\ufffd Amen.\n")
+        self.assertEqual(report.events["invalid-utf8-count"]["count"], 1)
+
+    def test_sword_cli_renders_with_diatheke(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "mods.d").mkdir()
+            (root / "mods.d/sample.conf").write_text("[Sample]\nModDrv=zText\n")
+            fake = root / "diatheke"
+            fake.write_text(f"#!{sys.executable}\nimport os, sys\nassert os.environ['SWORD_PATH'] and sys.argv[1:3] == ['-b', '2Sample'] and sys.argv[-1] == 'Gen 1:1-Rev 999:999'\n"
+                            "print('Genesis 1:1: In the beginning.\\nJohn 3:16: For God so loved the world.\\n(2Sample)' if 'plain' in sys.argv else"
+                            " 'Genesis 1:1: In the <w>beginning</w>.\\nJohn 3:16: For God.\\n(2Sample)')\n")
+            fake.chmod(0o755)
+            out = root / "sample.json"
+            (root / "mods.d/sample.conf").write_text("[2Sample]\nModDrv=zText\n")
+            run = subprocess.run([sys.executable, str(ROOT / "scripts/convert.py"), "2Sample", "--from", "sword", "--sword-path", str(root), "--diatheke", str(fake),
+                                  "--name", "Sample", "--out", str(out)], text=True, capture_output=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            data = json.loads(out.read_text())
+            self.assertEqual([b["osis"] for b in data["books"]], ["Gen", "John"])
+            self.assertEqual(data["books"][1]["chapters"][2]["verses"][15]["text"], "For God so loved the world.")
 
 
 if __name__ == "__main__":
