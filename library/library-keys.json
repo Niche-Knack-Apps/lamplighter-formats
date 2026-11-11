@@ -1,0 +1,11 @@
+{
+  "about": "Public keys of the Lamplighter library key (docs/STUDY-LIBRARY-OCI-SPEC.md §4). The app ships these; a new key ships in an update before anything is signed with it.",
+  "keys": [
+    {
+      "keyId": "8f57a68d449d468f",
+      "alg": "ed25519",
+      "publicKeyHex": "5a877d874eefdb7093aab4f8acb3f71cda9ac875d9991b882f20ae89e5d62789",
+      "created": "2026-11-11T18:37:33Z"
+    }
+  ]
+}

@@ -23,7 +23,7 @@ jobs:
       - run: npm test
       - run: npm run test:schemas
       - run: npm run lint:templates
-      - run: python3 -m py_compile scripts/oci-editions.py scripts/convert.py
+      - run: python3 -m py_compile scripts/oci-editions.py scripts/oci-library.py scripts/convert.py
 
   version:
     runs-on: ubuntu-latest

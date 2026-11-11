@@ -26,6 +26,9 @@ Made by [Niche-Knack](https://nk.tools) — Smart Tools. Sharp Solutions.
 | `templates/` | A small sample of each kind, lint-clean, to copy from. |
 | `vendor/bible-model.js` | Lamplighter's own reader model, so a test can prove a file loads exactly as the app loads it. |
 | `scripts/oci-editions.py` | Publish editions to any OCI registry (a zot server, for instance) and read them back. Python 3, standard library only. |
+| `scripts/oci-library.py` | Publish the study library (commentaries now; confessions and study works as the app learns to share them) to any OCI registry, signed or not, and pull it back. Signing needs the `cryptography` package. |
+| [`docs/LIBRARY-OCI.md`](docs/LIBRARY-OCI.md) | The library's registry layout, index, signature and static tree. |
+| `library/library-keys.json` | The public half of the Lamplighter library key, which signs the nk.tools library. |
 | `tests/` | Parser, validation, safety, numbering, and reader-compatibility checks using synthetic text. |
 
 ## Quick start
@@ -98,6 +101,31 @@ The artifact types are `application/vnd.nicheknack.lamplighter.edition.v1` (one 
 `…edition.v1+json`, and a small config blob with the facts the app lists an edition by) and
 `application/vnd.nicheknack.lamplighter.index.v1` for the index. `oras` reads and writes the
 same artifacts.
+
+### The study library
+
+Commentaries go to the same kind of registry, beside the editions, with `scripts/oci-library.py`
+(the contract is [`docs/LIBRARY-OCI.md`](docs/LIBRARY-OCI.md)). A plan file names each work, its
+file and the facts readers search by: author, date, coverage, a short description, and a label with
+the reason it was given.
+
+```sh
+# Publish the works a plan lists; nothing is sent until every work passes its checks
+python3 scripts/oci-library.py publish oci://registry.example.com/lamplighter works.json
+
+# List or pull them, checking the index signature against library/library-keys.json
+python3 scripts/oci-library.py catalog oci://nk.tools/lamplighter --require-signed
+python3 scripts/oci-library.py pull oci://nk.tools/lamplighter gill --out gill.json --require-signed
+
+# Write a read-only tree any web server can serve under /v2/
+python3 scripts/oci-library.py export-static oci://registry.example.com/lamplighter ./static
+```
+
+- A published version never changes; new content needs a new version.
+- Only formats the app can share device to device are published, each within the 64 MiB a share
+  carries.
+- `oci://nk.tools/lamplighter` is the Niche-Knack library, signed with the key in
+  `library/library-keys.json`.
 
 ## Contributing
 

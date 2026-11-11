@@ -58,20 +58,21 @@ class Registry:
             return {'Authorization': 'Basic ' + base64.b64encode(f'{self.user}:{self.password}'.encode()).decode()}
         return {}
 
-    def request(self, method, path, body=None, headers=None, retry=True, absolute=False):
+    def request(self, method, path, body=None, headers=None, retry=True, absolute=False, limit=None):
+        """limit: read at most limit + 1 bytes of the body, so a caller can refuse an oversized answer"""
         url = path if absolute else f'{self.origin}/v2/{path}'
         req = urllib.request.Request(url, data=body, method=method)
         for name, value in {**(headers or {}), **self._auth()}.items():
             req.add_header(name, value)
         try:
             with urllib.request.urlopen(req, timeout=120) as response:
-                return response.status, dict(response.headers), response.read()
+                return response.status, dict(response.headers), response.read() if limit is None else response.read(limit + 1)
         except urllib.error.HTTPError as error:
             if error.code == 401 and retry:
                 challenge = error.headers.get('WWW-Authenticate', '')
                 if challenge.lower().startswith('bearer'):
                     self._token(challenge)
-                    return self.request(method, path, body, headers, retry=False, absolute=absolute)
+                    return self.request(method, path, body, headers, retry=False, absolute=absolute, limit=limit)
             return error.code, dict(error.headers), error.read()
 
     def _token(self, challenge):
@@ -124,10 +125,12 @@ class Registry:
             sys.exit(f'manifest fetch failed for {repo}:{reference}: {status} {body[:200]!r}')
         return json.loads(body)
 
-    def blob(self, repo, digest):
-        status, _, body = self.request('GET', f'{repo}/blobs/{digest}')
+    def blob(self, repo, digest, limit=None):
+        status, _, body = self.request('GET', f'{repo}/blobs/{digest}', limit=limit)
         if status != 200:
             sys.exit(f'blob fetch failed for {repo}@{digest}: {status}')
+        if limit is not None and len(body) > limit:
+            sys.exit(f'blob {digest} is over the {limit}-byte limit')
         if 'sha256:' + hashlib.sha256(body).hexdigest() != digest:
             sys.exit(f'blob {digest} did not match its digest')
         return body
@@ -223,7 +226,9 @@ def cmd_push(args):
     before = len(index.get('entries', []))
     if len(entries) < before and not args.force_index:
         sys.exit(f'index would SHRINK {before} -> {len(entries)} entries; refusing. Re-run with --force-index if that is intended.')
-    index = {'schema': 1, 'generated': dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    # A library index carries more than editions (STUDY-LIBRARY-OCI-SPEC.md): its other top-level
+    # fields (the label definitions) and entries of every kind are kept as they are.
+    index = {**index, 'schema': 1, 'generated': dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
              'publisher': args.publisher or index.get('publisher', ''), 'entries': sorted(entries.values(), key=lambda e: e['id'])}
     write_index(registry, index)
     print(f'index {registry.repo("index")}:latest now lists {len(entries)} edition(s); {pushed} pushed')
