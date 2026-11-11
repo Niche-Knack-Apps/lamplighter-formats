@@ -4,3 +4,4 @@ tests/tmp-*/
 __pycache__/
 *.pyc
 .venv/
+test-results/
