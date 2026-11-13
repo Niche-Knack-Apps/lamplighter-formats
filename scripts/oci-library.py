@@ -48,7 +48,7 @@ _spec.loader.exec_module(oci)
 KINDS = {'commentary': 'commentaries', 'confession': 'confessions', 'study': 'study'}
 # Formats the app imports, exports and shares Lamplighter to Lamplighter (encrypted file, library pack,
 # nearby transfer). A confession or study format joins when the app release that shares it does.
-SHAREABLE = {'lamplighter-commentary@1': 'commentary'}
+SHAREABLE = {'lamplighter-commentary@1': 'commentary', 'lamplighter-confessions@1': 'confession'}
 LABELS = ('reformed', 'arminian', 'antinomian', 'lutheran', 'catholic', 'heretical', 'neutral', 'mixed')
 STUDY_TYPES = ('cross-references', 'topical', 'dictionary')
 SIGNATURE_LAYER = 'application/vnd.nicheknack.lamplighter.index.signature.v1+json'
@@ -128,6 +128,64 @@ def check_definitions(definitions):
             fail(f'the definition of {label} needs a name and a definition of at most 400 characters')
 
 
+def check_confessions(data, expected_id):
+    """The bounded lamplighter-confessions@1 document the reader imports and shares."""
+    def text(value, maximum, required=True):
+        return isinstance(value, str) and js_len(value) <= maximum and (not required or bool(value.strip()))
+    def number(value):
+        return type(value) is int and 0 <= value <= 100000
+    def need(condition):
+        if not condition:
+            fail(f'{expected_id}: invalid lamplighter-confessions@1 document')
+    need(data.get('format') == 'lamplighter-confessions@1')
+    works = data.get('works')
+    need(isinstance(works, list) and len(works) == 1)
+    work = works[0]
+    need(isinstance(work, dict) and work.get('id') == expected_id)
+    need(text(work.get('name'), 500) and text(work.get('short'), 100) and text(work.get('source'), 16000))
+    for key in ('year', 'unit', 'locator'):
+        if key in work:
+            need(text(work[key], 100, False))
+    if 'numerals' in work:
+        need(type(work['numerals']) is bool)
+    if 'sourceNotes' in work:
+        notes = work['sourceNotes']
+        need(isinstance(notes, list) and len(notes) <= 1000)
+        need(all(isinstance(n, dict) and text(n.get('at'), 500) and text(n.get('printed'), 16000) for n in notes))
+    chapters = work.get('chapters')
+    need(isinstance(chapters, list) and 0 < len(chapters) <= 1000)
+    seen, count = set(), 0
+    for chapter in chapters:
+        need(isinstance(chapter, dict) and number(chapter.get('n')) and chapter['n'] not in seen and text(chapter.get('title'), 2000))
+        seen.add(chapter['n'])
+        for key in ('cite', 'label'):
+            if key in chapter:
+                need(text(chapter[key], 500, False))
+        paragraphs = chapter.get('paragraphs')
+        need(isinstance(paragraphs, list) and len(paragraphs) > 0)
+        count += len(paragraphs)
+        need(count <= 20000)
+        numbers = set()
+        for paragraph in paragraphs:
+            need(isinstance(paragraph, dict) and number(paragraph.get('n')) and paragraph['n'] not in numbers)
+            numbers.add(paragraph['n'])
+            if 'question' in paragraph:
+                need(text(paragraph['question'], 16000))
+            body = paragraph.get('body')
+            need(isinstance(body, list) and 0 < len(body) <= 2000)
+            for part in body:
+                if isinstance(part, str):
+                    need(text(part, 128000, False))
+                    continue
+                if isinstance(part, list):
+                    need(len(part) == 2 and text(part[0], 100))
+                    refs = part[1]
+                else:
+                    need(isinstance(part, dict) and text(part.get('label'), 16000))
+                    refs = part.get('refs')
+                need(isinstance(refs, list) and 0 < len(refs) <= 2000 and all(text(ref, 100) for ref in refs))
+
+
 def check_work(work, definitions, base, draft_format):
     name = work.get('id', '?')
     unknown = set(work) - set(REQUIRED) - set(OPTIONAL)
@@ -187,6 +245,8 @@ def check_work(work, definitions, base, draft_format):
     stored = gzip.compress(raw, compresslevel=9, mtime=0)
     if len(stored) > MAX_STORED:
         fail(f'{name}: {len(stored)} bytes stored is over the 64 MiB limit')
+    if work['format'] == 'lamplighter-confessions@1':
+        check_confessions(data, work['id'])
     return raw, stored
 
 

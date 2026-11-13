@@ -409,3 +409,24 @@ test('a hostile index cannot make export-static write outside its directory, nor
   }finally{await registry.close();space.cleanup();}
 });
 
+
+test('a shareable confession publishes, pulls byte-for-byte and exports without a draft override',async()=>{
+  const space=await workspace({key:true}),registry=await start();
+  try{
+    const ref=`http://127.0.0.1:${registry.port}/lamp`;
+    const data={format:'lamplighter-confessions@1',works:[{id:'test-wcf',name:'Test confession',short:'Test',source:'Synthetic source',chapters:[{n:1,title:'Faith',paragraphs:[{n:1,body:['Faith.',['a',['John.3.16']]]}]}]}]};
+    const file=space.write('confession.json',data),work={...space.works.confession,file:path.resolve(file),format:data.format};
+    const plan=space.plan([space.works.commentary,work]);
+    await publisher('publish',ref,plan,...space.signed);
+    const pulled=path.resolve(space.dir,'pulled-confession.json');
+    await publisher('pull',ref,work.id,'--keys',space.keys,'--require-signed','--out',pulled);
+    assert.deepEqual(JSON.parse(fs.readFileSync(pulled,'utf8')),data);
+    const root=path.resolve(space.dir,'static');
+    await publisher('export-static',ref,root,'--keys',space.keys,'--require-signed');
+    assert.ok(fs.existsSync(path.join(root,'v2','lamp','index','manifests','latest')));
+    const before=sends(registry).length;
+    const bad=structuredClone(data);bad.works[0].id='other';space.write('confession.json',bad);
+    await failsWith(publisher('publish',ref,plan,...space.signed),/invalid lamplighter-confessions/);
+    assert.equal(sends(registry).length,before);
+  }finally{await registry.close();space.cleanup();}
+});
